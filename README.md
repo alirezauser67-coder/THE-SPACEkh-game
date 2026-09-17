@@ -1,2 +1,22 @@
-# THE-SPACEkh-game
-a good game made with union-alpha
+# ALIREZAKH game — افق رویداد (Event Horizon: Free Flight)
+
+بازی فضایی جهان‌باز سه‌بعدی با Three.js + Cannon-es، به‌صورت یک فایل HTML خودکفا.
+
+## اجرای محلی
+فایل `index.html` را مستقیم در مرورگر باز کنید، یا:
+
+```bash
+node server.js
+# http://localhost:8080
+```
+
+## کنترل‌ها
+- W/S پیشران · A/D حرکت جانبی · Space/Ctrl صعود و نزول
+- جهت‌ها یا ماوس (کلیک روی صفحه) برای هدایت
+- Shift شتاب · G فرود خودکار · T برخاستن · V دوربین
+- Tab نقشهٔ سامانه · J دفتر کشف‌ها · F ضربه به قطعات
+- موبایل: جوی‌استیک حرکت (چپ) + جوی‌استیک هدایت (راست) + دکمه‌های شتاب/صعود/نزول/فرود
+
+## استقرار روی Railway
+پوشهٔ `event_horizon_open` را به یک سرویس جدید وصل کنید؛ `railway.toml` و `server.js` آماده‌اند
+(`node server.js` روی پورت `PORT` محیط). بدون build — فقط Node 18+.

@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#06090e">
+<title>ALIREZAKH game — افق رویداد</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100;300;400;700&display=swap" rel="stylesheet">
+<style>
+:root{--gold:#e1b565;--amber:var(--gold);--ice:#a8d3e0;--glass:rgba(8,14,22,.88);--line:rgba(225,181,101,.25);--edge:24px}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#06090e;color:#eeeae0;font-family:'Vazirmatn',Tahoma,sans-serif}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+button:focus-visible,input:focus-visible{outline:2px solid var(--ice);outline-offset:4px}
+button:disabled{opacity:.4;cursor:not-allowed}
+#scene{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;z-index:0}
+.lbar{position:fixed;left:0;right:0;height:9vh;background:#000;z-index:5;pointer-events:none;transition:transform .8s ease}
+#barTop{top:0;transform:translateY(-100%)}
+#barBot{bottom:0;transform:translateY(100%)}
+body.letterboxed #barTop,body.letterboxed #barBot{transform:translateY(0)}
+.glass{background:linear-gradient(140deg,rgba(37,46,58,.7),var(--glass));backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--line);border-radius:12px;box-shadow:0 16px 48px #0006,inset 0 1px 0 #ffffff09}
+.chrome{position:fixed;z-index:40}
+#brand{top:max(var(--edge),env(safe-area-inset-top));right:max(var(--edge),env(safe-area-inset-right));padding-right:16px;border-right:2px solid var(--gold);color:var(--gold);font-size:1.2rem;font-weight:300;line-height:1.9;pointer-events:none}
+#brand small{display:block;color:var(--ice);font-size:.65rem}
+#hud{top:max(var(--edge),env(safe-area-inset-top));left:max(var(--edge),env(safe-area-inset-left));min-width:185px;padding:14px 18px;font-size:.7rem;line-height:2.1;pointer-events:none;font-variant-numeric:tabular-nums}
+#hud b{color:var(--gold);font-weight:400;unicode-bidi:isolate}
+#compass{top:max(var(--edge),env(safe-area-inset-top));left:50%;transform:translateX(-50%);width:min(34vw,420px);height:44px;text-align:center;padding:10px 20px;font-size:.7rem;color:var(--ice);overflow:hidden;pointer-events:none;background-image:repeating-linear-gradient(90deg,transparent 0 19px,var(--line) 19px 20px);background-size:100% 6px;background-repeat:no-repeat;background-position:bottom}
+#compass::after{content:'';position:absolute;bottom:0;left:50%;border:4px solid transparent;border-bottom-color:var(--gold)}
+#nearest{top:calc(max(var(--edge),env(safe-area-inset-top)) + 58px);left:50%;transform:translateX(-50%);max-width:40vw;text-align:center;font-size:.7rem;color:var(--ice);line-height:2;pointer-events:none}
+#flightReticle,#reticle{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:30}
+#flightReticle{width:58px;height:58px;border:1px solid #a8d3e05a;border-radius:50%;opacity:0;transition:opacity .4s;background:radial-gradient(circle,var(--gold) 0 2px,transparent 3px)}
+#flightReticle::before,#flightReticle::after{content:'';position:absolute;top:50%;width:24px;height:1px;background:var(--gold)}
+#flightReticle::before{left:-18px}#flightReticle::after{right:-18px}
+body.piloting #flightReticle{opacity:1}
+body.piloting,body.piloting *{cursor:none!important}
+body.piloting #cur{display:none!important}
+#reticle{width:34px;height:34px;opacity:.25;border-inline:1px solid var(--gold);transition:opacity .4s,scale .4s}
+#reticle.on,#reticle.active{opacity:1;scale:1.15}
+#discover{top:180px;left:50%;transform:translateX(-50%);width:min(400px,80vw);padding:14px 20px;text-align:center;font-size:.76rem;line-height:2;color:var(--gold);opacity:0;transition:opacity .7s;pointer-events:none}
+#discover.on{opacity:1}
+#hint{bottom:max(32px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:min(580px,80vw);text-align:center;font-size:.68rem;line-height:2;color:var(--ice);text-shadow:0 2px 8px #000;pointer-events:none}
+#panelToggle{top:50%;right:0;transform:translateY(-50%);z-index:61;width:44px;height:94px;writing-mode:vertical-rl;border:1px solid var(--line);border-right:0;border-radius:12px 0 0 12px;background:var(--glass);color:var(--gold);font-size:.68rem}
+#panel,#systemMap,#logPanel{display:none;position:fixed;z-index:60;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--gold) transparent}
+#panel.open,#systemMap.open,#logPanel.open{display:flex;flex-direction:column}
+#panel{top:0;right:0;width:min(300px,90vw);height:100%;height:100dvh;padding:calc(30px + env(safe-area-inset-top)) 58px calc(30px + env(safe-area-inset-bottom)) 22px;border-radius:16px 0 0 16px}
+h2,h3{font-weight:300;color:var(--gold)}
+#panel h2{font-size:1.1rem}.sub{font-size:.68rem;color:var(--ice);line-height:2;margin:8px 0 20px}
+.btn{display:block;flex-shrink:0;width:100%;min-height:44px;margin:5px 0;padding:10px 8px;border:1px solid var(--line);border-radius:8px;background:#ffffff05;font-size:.73rem;transition:background .2s,border-color .2s}
+.btn:hover:not(:disabled),.closeBtn:hover{background:#e1b56518;border-color:var(--gold)}
+.btn.on,.btn.active{background:#a8d3e015;border-color:var(--ice)}
+.rowlbl{display:block;font-size:.7rem;color:var(--ice);margin:20px 0 4px}
+#vol{width:100%;min-height:44px;accent-color:var(--gold);direction:ltr;flex-shrink:0}
+#systemMap{inset:0;margin:auto;width:min(800px,94vw);height:min(600px,84dvh);padding:18px;z-index:70}
+.panelHead{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px;flex-shrink:0}
+.panelHead h2{font-size:1rem}
+.closeBtn{min-height:44px;padding:8px 18px;border:1px solid var(--line);border-radius:8px;background:#ffffff05;font-size:.72rem}
+#mapCanvas{display:block;flex:1;width:100%;min-height:0;border:1px solid var(--line);border-radius:8px;background:radial-gradient(ellipse,#102333,#04070c);touch-action:none}
+#logPanel{top:0;left:0;width:min(380px,94vw);height:100%;height:100dvh;padding:calc(24px + env(safe-area-inset-top)) 22px calc(24px + env(safe-area-inset-bottom));border-radius:0 16px 16px 0;z-index:70}
+#logEntries{overflow:auto;min-height:0;line-height:2.1;font-size:.74rem;color:var(--ice)}
+#logEntries:empty::after{content:'کشف‌های شما در این دفتر ثبت می‌شوند.'}
+#logEntries > *{padding:14px 0;border-bottom:1px solid var(--line)}
+#touchControls{position:fixed;z-index:45;bottom:max(12px,env(safe-area-inset-bottom));left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right));display:none;justify-content:space-between;align-items:end;gap:8px;pointer-events:none;direction:ltr}
+.touchGroup{display:grid;grid-template-columns:repeat(2,minmax(44px,66px));gap:5px;pointer-events:auto;direction:rtl}
+.touchGroup.middle{grid-template-columns:minmax(44px,66px)}
+#touchControls button{min-height:44px;padding:6px 3px;border:1px solid var(--line);border-radius:8px;background:var(--glass);color:var(--ice);font-size:.6rem;touch-action:none;user-select:none;-webkit-user-select:none}
+#touchControls button:active,#touchControls button.on{background:#e1b56535;color:var(--gold);border-color:var(--gold)}
+#toasts{bottom:100px;right:var(--edge);z-index:75;display:flex;flex-direction:column;gap:8px;max-width:min(340px,86vw);pointer-events:none}
+.toast{padding:12px 18px;border:1px solid var(--line);border-radius:10px;background:var(--glass);font-size:.74rem;line-height:2;transition:opacity .4s,transform .4s}
+.toast.gold{color:var(--gold)}.toast.out{opacity:0;transform:translateY(12px)}
+#flash{position:fixed;inset:0;z-index:80;background:#fff;opacity:0;pointer-events:none;transition:opacity .5s}
+#cur{position:fixed;z-index:300;display:none;width:24px;height:24px;border:1px solid var(--gold);border-radius:50%;transform:translate(-50%,-50%);pointer-events:none}
+#cur.big{width:38px;height:38px;background:#e1b56515}
+body.ui-hidden .chrome,body.ui-hidden #panel,body.ui-hidden #systemMap,body.ui-hidden #logPanel,body.ui-hidden #touchControls,body.ui-hidden #flightReticle,body.ui-hidden #reticle,body.ui-hidden #cur{visibility:hidden!important;opacity:0!important;pointer-events:none!important}
+#loader{position:fixed;inset:0;z-index:190;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:20px;text-align:center;padding:28px;background:radial-gradient(ellipse at 50% 40%,#152737 0,#090f19 40%,#04070c 80%);transition:opacity 1s}
+#loader .orbit{width:126px;height:126px;border:1px solid var(--line);border-radius:50%;position:relative;box-shadow:0 0 70px #e1b5650a,inset 0 0 40px #a8d3e010}
+#loader .orbit::before{content:'';position:absolute;inset:25px -16px;border:1px solid var(--gold);border-radius:50%;transform:rotate(-32deg);box-shadow:0 0 18px #e1b56520}
+#loader .orbit::after{content:'';position:absolute;inset:35px;border-radius:50%;background:#03060a;box-shadow:0 0 22px #e1b56530}
+#loader h1{font-size:clamp(2.2rem,6vw,4rem);font-weight:100;color:var(--gold)}
+#loader p{max-width:440px;color:var(--ice);font-size:.82rem;line-height:2.2}
+#loader .eyebrow{font-size:.65rem;color:var(--gold)}
+#startBtn{min-width:220px;min-height:54px;padding:12px 32px;margin-top:10px;border:1px solid var(--gold);border-radius:9px;background:linear-gradient(120deg,#e1b56524,#e1b56508);color:var(--gold);font-size:.95rem;box-shadow:0 8px 40px #0004;transition:background .3s}
+#startBtn:hover{background:#e1b56530}
+@media(pointer:coarse) and (max-width:1100px){#touchControls{display:flex}#hint{bottom:170px}#toasts{bottom:210px}#cur{display:none!important}}
+@media(max-width:700px){:root{--edge:14px}#brand{font-size:.95rem}#brand small{font-size:.58rem}#hud{top:94px;min-width:0;width:142px;padding:10px;font-size:.6rem}#compass{top:94px;left:auto;right:14px;transform:none;width:calc(100vw - 184px);font-size:.6rem}#nearest{top:150px;left:auto;right:14px;transform:none;max-width:calc(100vw - 184px);font-size:.6rem}#discover{top:260px;font-size:.68rem}#hint{font-size:.6rem}#loader{gap:14px}#systemMap{padding:12px}}
+@media(max-width:360px){.touchGroup{grid-template-columns:repeat(2,44px)}.touchGroup.middle{grid-template-columns:44px}#touchControls{gap:4px}#touchControls button{font-size:.54rem}}
+@media(max-height:500px){#brand{font-size:.85rem}#hud{top:14px;width:145px;min-width:0;font-size:.55rem;padding:8px;line-height:1.8}#compass{top:14px;left:50%;right:auto;transform:translateX(-50%);width:30vw}#nearest{top:65px;left:50%;right:auto;transform:translateX(-50%);max-width:30vw}#discover{top:110px;width:36vw;font-size:.62rem}#loader{gap:10px}#loader .orbit{width:68px;height:68px}#loader .orbit::before{inset:15px -10px}#loader .orbit::after{inset:20px}#loader h1{font-size:2rem}#loader p{font-size:.7rem}#hint{font-size:.56rem}}
+#flightDock{bottom:72px;left:50%;transform:translateX(-50%);display:flex;gap:6px;padding:7px;border-radius:16px;z-index:46}
+#flightDock button{border:1px solid transparent;background:transparent;padding:9px 16px;border-radius:10px;color:var(--ice);font-size:.72rem;min-height:44px;white-space:nowrap}
+#flightDock button:hover{background:#ffffff0d;border-color:var(--line)}
+#flightDock #quickLand{background:#e1b56516;color:var(--gold);border-color:var(--line)}
+#approach{right:24px;top:130px;width:218px;padding:18px;pointer-events:none}
+#approach .eyebrow{font-size:.59rem;color:var(--ice);letter-spacing:1px}
+#approach strong{display:block;font-size:1rem;font-weight:400;color:var(--gold);margin:8px 0}
+#approach p{font-size:.66rem;color:#a5b6bf;line-height:2}
+#approach .altitude{font-size:1.75rem;font-weight:300;direction:ltr;text-align:right;font-variant-numeric:tabular-nums}
+#hud{border-top:2px solid var(--gold);background:linear-gradient(150deg,#15202bc9,#080e16cc)}
+#nearest div{padding:3px 14px;border-inline-start:1px solid var(--line);margin-bottom:3px}
+#systemMap{width:min(920px,94vw);height:min(680px,86dvh)}
+#mapLegend{display:flex;gap:18px;font-size:.62rem;color:var(--ice);padding:12px 2px 0;flex-wrap:wrap}
+body.piloting #flightDock button,body.piloting #panelToggle{cursor:pointer!important}
+@media(max-width:900px){#approach{top:auto;bottom:146px;width:176px;padding:12px;right:14px}#approach .altitude{font-size:1.3rem}#approach p{font-size:.58rem}}
+@media(max-width:700px){#flightDock{bottom:58px;width:calc(100% - 24px);justify-content:center;gap:2px}#flightDock button{padding:8px 10px;font-size:.61rem}#approach{bottom:130px;right:14px;width:154px}#hud{line-height:1.9}#hint{bottom:12px}}
+@media(pointer:coarse) and (max-width:1100px){#flightDock{bottom:190px}#approach{bottom:256px}#hint{display:none}}
+@media(max-height:500px){#approach{display:none}#flightDock{bottom:16px;left:auto;right:12px;transform:none;width:auto}#hint{display:none}}
+@keyframes bootIn{from{opacity:0}to{opacity:1}}
+body.booting .boot-only{animation:none;opacity:0;pointer-events:none;transition:opacity .8s}
+.boot-only{animation:bootIn .7s ease both}
+#hud{animation-delay:.1s}#compass{animation-delay:.2s}#approach{animation-delay:.3s}#flightDock{animation-delay:.4s}
+body.booting #touchControls{display:none}
+#cockpitReadout{position:fixed;bottom:162px;left:50%;transform:translateX(-50%) perspective(600px) rotateX(12deg);width:340px;padding:12px 22px;border:1px solid #87e1d43d;border-top:2px solid #89dec8;background:linear-gradient(130deg,#072b2da8,#0a121ec9);border-radius:5px 5px 22px 22px;pointer-events:none;display:flex;justify-content:space-between;gap:18px;color:#a8ebd9;text-align:center;font-size:.65rem;box-shadow:0 0 32px #57cfb912}
+#cockpitReadout b{display:block;font-size:1.1rem;font-weight:300;font-variant-numeric:tabular-nums}
+body.chase #cockpitReadout{display:none}
+#scanSweep{position:fixed;inset:50%;z-index:21;border:1px solid #99ffe5;border-radius:50%;opacity:0;pointer-events:none}
+#scanSweep.scanning{animation:scanPulse 1.8s ease-out}
+@keyframes scanPulse{0%{inset:45%;opacity:.7}100%{inset:-45%;opacity:0}}
+#biomeBadge{margin-top:8px;border-top:1px solid var(--line);padding-top:8px;color:#a2dfc6;font-size:.6rem;line-height:2}
+#loader .eyebrow{letter-spacing:.28em;direction:ltr;color:#a4e5d3}
+#loader h1{letter-spacing:.08em;font-weight:300;direction:ltr;font-size:clamp(2rem,7vw,5.4rem)}
+#loader{background:radial-gradient(ellipse at 30% 40%,#19464580,transparent 60%),radial-gradient(ellipse at 75% 65%,#3d264870,transparent 55%),#040b12}
+#loadStatus{font-size:.66rem!important;color:#9fb9bd!important}
+#brand{direction:ltr}
+@media(pointer:coarse) and (max-width:1100px){#cockpitReadout{display:none}#touchControls{z-index:47}#touchControls button{border-color:#9cdbcd66;background:#0b2027e6;box-shadow:0 3px 10px #0006}#flightDock{bottom:180px}#approach{bottom:252px}#hint{display:none}}
+@media(max-width:700px){#cockpitReadout{bottom:124px;width:190px;left:14px;transform:none;padding:8px;font-size:.55rem}#cockpitReadout b{font-size:.8rem}}
+@media(max-height:500px){#cockpitReadout{display:none}}
+#touchControls{inset:auto 0 0;height:290px;display:none;direction:ltr;z-index:47}
+.thumbPad{position:absolute;bottom:calc(24px + env(safe-area-inset-bottom));width:120px;height:120px;border:1px solid #ffffff50;border-radius:50%;background:radial-gradient(circle,#40556045,#10182260);pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;box-shadow:inset 0 0 0 14px #ffffff08}
+#moveStick{left:max(22px,env(safe-area-inset-left))}#lookStick{right:max(22px,env(safe-area-inset-right))}
+.padCross{position:absolute;inset:25%;border:1px dashed #ffffff30;border-radius:50%;pointer-events:none}
+.thumbPad small{position:absolute;left:0;right:0;bottom:-19px;text-align:center;font-size:.58rem;color:#d9e4ee;pointer-events:none}
+.thumbKnob{position:absolute;left:50%;top:50%;width:48px;height:48px;border:1px solid #ffffff90;border-radius:50%;background:radial-gradient(circle at 35% 25%,#e5f3fa99,#667c9299);box-shadow:0 3px 12px #0005;transform:translate(-50%,-50%);pointer-events:none}
+.thumbPad.active{border-color:#aae9e7;box-shadow:0 0 24px #a7e6d526,inset 0 0 0 14px #ffffff08}
+.flightActions{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(164px + env(safe-area-inset-bottom));display:flex;gap:12px;pointer-events:auto}
+#touchControls .flightActions button{width:54px;height:54px;min-height:54px;padding:0;border-radius:50%;border:1px solid #ffffff80;background:#18263180;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#edf9ff;touch-action:none;user-select:none;-webkit-user-select:none}
+.flightActions button span{font-size:24px;line-height:25px}.flightActions button small{font-size:.5rem}
+#touchControls .flightActions button.on{border-color:#b8f0cf;background:#579b8b80;box-shadow:0 0 18px #79ddc940}
+#touchControls .actionBoost{border-color:var(--gold)!important;color:var(--gold)!important}
+@media(pointer:coarse) and (max-width:1100px){body:not(.booting):not(.menus-open) #touchControls{display:block}#flightDock{bottom:244px}#approach{bottom:320px}#toasts{bottom:300px}#hud{font-size:.56rem}#flightDock button{padding:6px 9px}}
+body.menus-open #touchControls{display:none!important}
+@media(pointer:coarse) and (max-width:1100px) and (orientation:landscape){#touchControls{height:180px}.thumbPad{width:104px;height:104px;bottom:20px}#moveStick{left:max(24px,env(safe-area-inset-left))}#lookStick{right:max(24px,env(safe-area-inset-right))}.flightActions{left:auto;right:max(156px,env(safe-area-inset-right));transform:none;bottom:24px;display:grid;grid-template-columns:repeat(2,48px);gap:10px}#touchControls .flightActions button{width:48px;height:48px;min-height:48px}#flightDock{bottom:18px;left:150px;right:auto;transform:none;width:auto}#flightDock button{font-size:.55rem;padding:6px 7px}#hud{max-height:130px;overflow:hidden;top:12px;bottom:auto}#approach,#discover.on{display:none}}
+@media(pointer:coarse) and (max-width:600px) and (max-height:450px){#flightDock{top:12px;bottom:auto;left:175px}#compass{display:none}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body class="booting">
+<canvas id="scene" aria-label="نمای جهان باز و پرواز آزاد"></canvas>
+<div id="barTop" class="lbar" aria-hidden="true"></div>
+<div id="barBot" class="lbar" aria-hidden="true"></div>
+<div id="brand" class="chrome">ALIREZAKH<small>game · افق رویداد</small></div>
+<div id="hud" class="chrome glass boot-only" aria-label="وضعیت پرواز">سامانهٔ ناوبری<br><b>در انتظار آغاز پرواز</b></div>
+<div id="compass" class="chrome glass boot-only" aria-label="قطب‌نمای پرواز">جهت پرواز</div>
+<div id="nearest" class="chrome" role="status">نزدیک‌ترین مقصد · ناشناخته</div>
+<aside id="approach" class="chrome glass boot-only" aria-label="راهنمای فرود"><span class="eyebrow">رادار سطح</span><strong id="approachName">در انتظار پرواز</strong><div id="altimeter" class="altitude">—</div><p id="landingStatus">ارتفاع از سطح · متر</p><div id="biomeBadge">کاوشگر زیست‌بوم آماده است</div></aside>
+<nav id="flightDock" class="chrome glass boot-only" aria-label="فرمان‌های سریع"><button id="quickMap" type="button">نقشه · Tab</button><button id="quickLand" type="button">فرود · G</button><button id="quickLaunch" type="button">برخاستن · T</button><button id="quickCamera" type="button">دوربین · V</button></nav>
+<div id="cockpitReadout" class="chrome boot-only" aria-label="ابزارهای کابین"><span>پیشران<b id="engineReadout">۰٪</b></span><span>سرعت عمودی<b id="verticalReadout">۰</b></span><span>کاوش<b id="surveyReadout">۰ / ۱۲</b></span></div>
+<div id="scanSweep" class="chrome" aria-hidden="true"></div>
+<div id="flightReticle" aria-hidden="true"></div>
+<div id="reticle" aria-hidden="true"></div>
+<div id="discover" class="chrome glass" role="status"></div>
+<div id="hint" class="chrome">مسیرتان را خودتان انتخاب کنید؛ برای کشف، نشانگر را روی مقصد نگه دارید.</div>
+<button id="panelToggle" class="chrome" type="button" aria-controls="panel" aria-expanded="false">تنظیمات پرواز</button>
+<aside id="panel" class="glass" aria-label="تنظیمات پرواز">
+  <h2>کابین فرمان</h2>
+  <p class="sub">جهان را به شیوهٔ خود کشف کنید.</p>
+  <button id="bCamera" class="btn" type="button">تغییر دوربین</button>
+  <button id="bLand" class="btn" type="button">فرود خودکار (G)</button>
+  <button id="bTakeoff" class="btn" type="button">برخاستن (T)</button>
+  <button id="bLetter" class="btn" type="button" aria-pressed="false">قاب سینمایی: خاموش</button>
+  <button id="bSnap" class="btn" type="button">ثبت تصویر</button>
+  <button id="bMute" class="btn" type="button" aria-pressed="false">صدا: روشن</button>
+  <button id="bTheme" class="btn" type="button">رنگ کابین: کهربایی و یخی</button>
+  <button id="bMap" class="btn" type="button" aria-controls="systemMap" aria-expanded="false">نقشهٔ سامانه</button>
+  <button id="bLog" class="btn" type="button" aria-controls="logPanel" aria-expanded="false">دفتر کشف‌ها</button>
+  <label for="vol" class="rowlbl">بلندی صدا</label>
+  <input id="vol" type="range" min="0" max="100" value="70">
+</aside>
+<section id="systemMap" class="glass" aria-label="نقشهٔ سامانه">
+  <header class="panelHead"><h2>نقشهٔ سامانه</h2><button id="mapClose" class="closeBtn" type="button">بستن نقشه</button></header>
+  <canvas id="mapCanvas" width="760" height="480" aria-label="موقعیت سفینه و مقصدهای قابل کاوش"></canvas>
+</section>
+<section id="logPanel" class="glass" aria-label="دفتر کشف‌ها">
+  <header class="panelHead"><h2>دفتر کشف‌ها</h2><button id="logClose" class="closeBtn" type="button">بستن دفتر</button></header>
+  <div id="logEntries" aria-live="polite"></div>
+</section>
+<div id="touchControls" role="group" aria-label="کنترل‌های لمسی سفینه">
+  <div id="moveStick" class="thumbPad" role="group" aria-label="جوی‌استیک حرکت؛ جلو، عقب و حرکت جانبی"><div class="padCross"></div><span class="thumbKnob"></span><small>حرکت</small></div>
+  <div id="lookStick" class="thumbPad" role="group" aria-label="جوی‌استیک نگاه؛ چرخش افقی و عمودی"><div class="padCross"></div><span class="thumbKnob"></span><small>هدایت</small></div>
+  <div class="flightActions">
+    <button type="button" id="touchBoost" class="actionBoost" aria-label="شتاب؛ نگه دارید" aria-pressed="false"><span aria-hidden="true">»</span><small>شتاب</small></button>
+    <button type="button" id="touchRise" aria-label="صعود؛ نگه دارید" aria-pressed="false"><span aria-hidden="true">↑</span><small>صعود</small></button>
+    <button type="button" id="touchDrop" aria-label="نزول؛ نگه دارید" aria-pressed="false"><span aria-hidden="true">↓</span><small>نزول</small></button>
+    <button type="button" id="touchLand" aria-label="فرود یا برخاستن"><span aria-hidden="true">⊥</span><small>فرود</small></button>
+  </div>
+</div>
+<div id="toasts" class="chrome" role="status"></div>
+<div id="flash" aria-hidden="true"></div>
+<div id="cur" aria-hidden="true"></div>
+<div id="loader">
+  <div class="orbit" aria-hidden="true"></div>
+  <div class="eyebrow">ALIREZAKH game</div>
+  <h1>ALIREZAKH</h1>
+  <p>ساختهٔ ALIREZAKH game — افق رویداد: پرواز آزاد در سامانه‌ای بی‌کران. از سکوت یخ تا تلاطم اقیانوس؛ مسیر از پیش نوشته‌ای ندارد.</p>
+  <button id="startBtn" type="button">آغاز پرواز</button>
+  <p id="loadStatus">سامانهٔ پرواز آماده است · ALIREZAKH game</p>
+</div>
+<noscript><div style="position:fixed;inset:0;z-index:250;display:grid;place-items:center;background:#06090e;padding:30px;text-align:center">برای آغاز پرواز، جاوااسکریپت مرورگر را فعال کنید.</div></noscript>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+  "cannon-es":"https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"
+}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import * as CANNON from 'cannon-es';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+const AudioSys = {
+  ctx: null, master: null, volume: 0.7, muted: false,
+  drone: {}, wind: {}, flight: null, ambient: {},
+  tickTimer: null, padTimer: null, reverbSend: null,
+  tickOn: false, windOn: false, dilation: 0,
+  _scoreUntil: 0, _droneBase: 0.12, _padBase: 0.045,
+  _flightState: { throttle: 0, speed: 0, location: 'space' },
+
+  ensure() {
+    if (this.ctx) {
+      if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+      return this.ctx;
+    }
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return null;
+    let ctx;
+    try { ctx = new AudioContext(); } catch { return null; }
+    this.ctx = ctx;
+    this.master = ctx.createGain(); this.master.gain.value = this.muted ? 0 : this.volume;
+    const comp = ctx.createDynamicsCompressor();
+    this.master.connect(comp); comp.connect(ctx.destination);
+    const len = Math.floor(ctx.sampleRate * 2.8);
+    const ir = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = ir.getChannelData(ch);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.5);
+    }
+    const conv = ctx.createConvolver(); conv.buffer = ir;
+    this.reverbSend = ctx.createGain(); this.reverbSend.gain.value = 0.5;
+    this.reverbSend.connect(conv); conv.connect(this.master);
+    this.startDrone(); this.startWind(); this.startFlight(); this.startPads(); this.scheduleTick();
+    this.setWind(this.windOn); this.setDilation(this.dilation);
+    const state = this._flightState;
+    this.updateFlight(state.throttle, state.speed, state.location);
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+    return ctx;
+  },
+  setVolume(v) {
+    this.volume = Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : this.volume;
+    if (this.master) this.master.gain.setTargetAtTime(this.muted ? 0 : this.volume, this.ctx.currentTime, 0.03);
+  },
+  setMuted(m) {
+    this.muted = !!m;
+    if (this.master) this.master.gain.setTargetAtTime(this.muted ? 0 : this.volume, this.ctx.currentTime, 0.03);
+  },
+  noiseBuffer(seconds, decay = 0) {
+    const ctx = this.ctx, buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * seconds), ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, decay);
+    return buffer;
+  },
+  duck(level, dur, recovery) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    this._duckLevel = this.scoreActive ? Math.min(this._duckLevel, level) : level;
+    this._scoreUntil = Math.max(this._scoreUntil, t + dur + recovery);
+    [this.droneGain, this.padGain].forEach((g, i) => {
+      if (!g) return;
+      const base = i === 0 ? this._droneBase : this._padBase;
+      const p = g.gain, value = p.value;
+      if (p.cancelAndHoldAtTime) p.cancelAndHoldAtTime(t);
+      else { p.cancelScheduledValues(t); p.setValueAtTime(value, t); }
+      p.linearRampToValueAtTime(this._duckLevel * base, t + dur);
+      p.setValueAtTime(this._duckLevel * base, Math.max(t + dur, this._scoreUntil - 1.2));
+      p.linearRampToValueAtTime(base, this._scoreUntil);
+    });
+  },
+  startDrone() {
+    const ctx = this.ctx;
+    const g = ctx.createGain(); g.gain.value = this._droneBase; g.connect(this.master);
+    this.droneGain = g;
+    const filt = ctx.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = 320; filt.Q.value = 2;
+    filt.connect(g); this.droneFilter = filt;
+    const lfo = ctx.createOscillator(); lfo.frequency.value = 0.06;
+    const lfoG = ctx.createGain(); lfoG.gain.value = 140;
+    lfo.connect(lfoG); lfoG.connect(filt.frequency); lfo.start();
+    [['sine', 41, 0, 0.5], ['sawtooth', 82, -6, 0.13], ['sawtooth', 82.4, 5, 0.13], ['triangle', 164, 0, 0.13]].forEach(([type, frequency, detune, gain]) => {
+      const o = ctx.createOscillator(); o.type = type; o.frequency.value = frequency; o.detune.value = detune;
+      const og = ctx.createGain(); og.gain.value = gain;
+      o.connect(og); og.connect(filt); o.start();
+    });
+    const noise = ctx.createBufferSource(); noise.buffer = this.noiseBuffer(2); noise.loop = true;
+    const nf = ctx.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = 900; nf.Q.value = 0.6;
+    const ng = ctx.createGain(); ng.gain.value = 0.015;
+    noise.connect(nf); nf.connect(ng); ng.connect(this.master); noise.start();
+    const nlfo = ctx.createOscillator(); nlfo.frequency.value = 0.09;
+    const nlg = ctx.createGain(); nlg.gain.value = 0.01;
+    nlfo.connect(nlg); nlg.connect(ng.gain); nlfo.start();
+    this.airRate = noise.playbackRate; this.airFilter = nf; this.drone = { g };
+  },
+  startWind() {
+    const ctx = this.ctx;
+    const src = ctx.createBufferSource(); src.buffer = this.noiseBuffer(3); src.loop = true;
+    const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 480;
+    const mod = ctx.createGain(); mod.gain.value = 1;
+    const lfo = ctx.createOscillator(); lfo.frequency.value = 0.13;
+    const lg = ctx.createGain(); lg.gain.value = 0.45;
+    lfo.connect(lg); lg.connect(mod.gain); lfo.start();
+    const g = ctx.createGain(); g.gain.value = 0;
+    src.connect(f); f.connect(mod); mod.connect(g); g.connect(this.master); src.start();
+    this.wind = { g }; this.windMod = mod; this.windRate = src.playbackRate;
+  },
+  setWind(on) {
+    this.windOn = !!on;
+    if (!this.ctx || !this.wind.g || this.wind.on === this.windOn) return;
+    this.wind.on = this.windOn;
+    this.wind.g.gain.setTargetAtTime(this.windOn ? 0.07 : 0, this.ctx.currentTime, 0.6);
+  },
+  setTick(on) { this.tickOn = !!on; },
+  scheduleTick() {
+    const loop = () => {
+      if (this.tickOn && this.ctx.state === 'running' && !this.muted) this.tick();
+      this.tickTimer = setTimeout(loop, 750 + Math.random() * 750);
+    };
+    loop();
+  },
+  tick() {
+    const ctx = this.ctx, t = ctx.currentTime;
+    const o = ctx.createOscillator(); o.type = 'square';
+    this._tickFlip = !this._tickFlip; o.frequency.value = this._tickFlip ? 2100 : 1600;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.03, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+    o.connect(g); g.connect(this.master); o.start(t); o.stop(t + 0.06);
+    o.onended = () => { o.disconnect(); g.disconnect(); };
+  },
+  organSwell() {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    this.duck(0.25, 0.5, 11.5);
+    const out = ctx.createGain();
+    out.gain.setValueAtTime(0.0001, t); out.gain.linearRampToValueAtTime(0.09, t + 3.4);
+    out.gain.linearRampToValueAtTime(0.0001, t + 9);
+    out.connect(this.master); out.connect(this.reverbSend);
+    let remaining = 5;
+    [1, 1.5, 2, 3, 4].forEach(r => {
+      const o = ctx.createOscillator(); o.type = r === 1 ? 'sawtooth' : 'sine'; o.frequency.value = 65 * r;
+      const og = ctx.createGain(); og.gain.value = 0.9 / r;
+      o.connect(og); og.connect(out); o.start(t); o.stop(t + 9.5);
+      o.onended = () => { o.disconnect(); og.disconnect(); if (!--remaining) out.disconnect(); };
+    });
+  },
+  explosion() {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    this.duck(0.15, 0.2, 3.8);
+    const o = ctx.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(30, t + 1.2);
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(0.5, t); og.gain.exponentialRampToValueAtTime(0.001, t + 1.4);
+    o.connect(og); og.connect(this.master); og.connect(this.reverbSend); o.start(t); o.stop(t + 1.5);
+    o.onended = () => { o.disconnect(); og.disconnect(); };
+    const n = ctx.createBufferSource(); n.buffer = this.noiseBuffer(1.2, 1.5);
+    const f = ctx.createBiquadFilter(); f.type = 'lowpass';
+    f.frequency.setValueAtTime(4000, t); f.frequency.exponentialRampToValueAtTime(120, t + 1);
+    const ng = ctx.createGain(); ng.gain.value = 0.35;
+    n.connect(f); f.connect(ng); ng.connect(this.master); ng.connect(this.reverbSend); n.start(t);
+    n.onended = () => { n.disconnect(); f.disconnect(); ng.disconnect(); };
+    setTimeout(() => this.organSwell(), 450);
+  },
+  impact(force = 1) {
+    if (!this.ctx || this.muted) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const k = clamp(force / 12, 0.05, 1.4), v = clamp(k * 0.28, 0.03, 0.35);
+    const o = ctx.createOscillator(); o.type = 'triangle';
+    o.frequency.setValueAtTime(80 + 120 * k + rand(-8, 8), t); o.frequency.exponentialRampToValueAtTime(45, t + 0.14);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12 + k * 0.08);
+    o.connect(g); g.connect(this.master); g.connect(this.reverbSend); o.start(t); o.stop(t + 0.14 + k * 0.1);
+    o.onended = () => { o.disconnect(); g.disconnect(); };
+    const n = ctx.createBufferSource(); n.buffer = this.noiseBuffer(0.3, 2);
+    const nf = ctx.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = 1400 + k * 2200; nf.Q.value = 0.8;
+    const ng = ctx.createGain(); ng.gain.setValueAtTime(v * 0.7, t);
+    ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.1 + k * 0.12);
+    n.connect(nf); nf.connect(ng); ng.connect(this.master); n.start(t);
+    n.onended = () => { n.disconnect(); nf.disconnect(); ng.disconnect(); };
+  },
+  blip() {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const o = ctx.createOscillator(); o.frequency.value = 880;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.05, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
+    o.connect(g); g.connect(this.master); o.start(t); o.stop(t + 0.1);
+    o.onended = () => { o.disconnect(); g.disconnect(); };
+  },
+  whoosh() {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const n = ctx.createBufferSource(); n.buffer = this.noiseBuffer(1.6);
+    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.2;
+    f.frequency.setValueAtTime(200, t); f.frequency.exponentialRampToValueAtTime(1800, t + 0.9);
+    f.frequency.exponentialRampToValueAtTime(150, t + 1.6);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.2, t + 0.5);
+    g.gain.linearRampToValueAtTime(0.0001, t + 1.6);
+    n.connect(f); f.connect(g); g.connect(this.master); n.start(t);
+    n.onended = () => { n.disconnect(); f.disconnect(); g.disconnect(); };
+  },
+  chime() {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    this.duck(0.4, 0.3, 2);
+    [660, 990].forEach((f, i) => {
+      const o = ctx.createOscillator(); o.frequency.value = f;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t + i * 0.22);
+      g.gain.linearRampToValueAtTime(0.07, t + i * 0.22 + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.22 + 1);
+      o.connect(g); g.connect(this.master); g.connect(this.reverbSend);
+      o.start(t + i * 0.22); o.stop(t + i * 0.22 + 1.1);
+      o.onended = () => { o.disconnect(); g.disconnect(); };
+    });
+  },
+  startPads() {
+    const roots = [110, 98, 123, 87, 104, 116];
+    const shapes = [[1, 1.5, 2, 2.5], [1, 1.25, 1.5, 2], [1, 1.5, 1.875, 2.5], [1, 1.2, 1.5, 2.4]];
+    const ctx = this.ctx;
+    const padGain = ctx.createGain(); padGain.gain.value = this._padBase;
+    padGain.connect(this.master); padGain.connect(this.reverbSend); this.padGain = padGain;
+    const playChord = () => {
+      const now = ctx.currentTime;
+      if (this.scoreActive || this.muted || ctx.state !== 'running' || now < (this._padUntil || 0)) {
+        this.padTimer = setTimeout(playChord, 6000); return;
+      }
+      const t = ctx.currentTime;
+      const root = roots[(Math.random() * roots.length) | 0] * (Math.random() < 0.3 ? 0.5 : 1);
+      const shape = shapes[(Math.random() * shapes.length) | 0];
+      const dur = 34 + Math.random() * 28; this._padUntil = t + dur;
+      const envelope = ctx.createGain();
+      envelope.gain.setValueAtTime(0, t); envelope.gain.linearRampToValueAtTime(1, t + 6);
+      envelope.gain.setValueAtTime(1, t + dur - 8); envelope.gain.linearRampToValueAtTime(0, t + dur);
+      envelope.connect(padGain);
+      let remaining = shape.length;
+      shape.forEach(m => {
+        const f = root * m * (1 + (Math.random() * 0.004 - 0.002));
+        const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = f;
+        const o2 = ctx.createOscillator(); o2.type = 'triangle'; o2.frequency.value = f * 2.002;
+        const g = ctx.createGain(); g.gain.value = 0.4;
+        o.connect(g); o2.connect(g); g.connect(envelope); o.start(t); o2.start(t);
+        o.stop(t + dur + 1); o2.stop(t + dur + 1);
+        o2.onended = () => { o.disconnect(); o2.disconnect(); g.disconnect(); if (!--remaining) envelope.disconnect(); };
+      });
+      this.padTimer = setTimeout(playChord, dur * 1000);
+    };
+    playChord();
+  },
+  get scoreActive() { return !!this.ctx && this.ctx.currentTime < this._scoreUntil; },
+  setDilation(d) {
+    this.dilation = Number.isFinite(d) ? Math.max(0, Math.min(1, d)) : 0;
+    if (!this.ctx) return;
+    const rate = 1 - this.dilation * 0.35, t = this.ctx.currentTime;
+    if (this.airRate) this.airRate.setTargetAtTime(rate, t, 0.2);
+    if (this.windRate) this.windRate.setTargetAtTime(rate, t, 0.2);
+    if (this.airFilter) this.airFilter.detune.setTargetAtTime(-this.dilation * 250, t, 0.2);
+    if (this.droneFilter) this.droneFilter.detune.setTargetAtTime(-this.dilation * 250, t, 0.2);
+    if (this.flight) this.flight.filter.detune.setTargetAtTime(-this.dilation * 350, t, 0.2);
+  },
+  startFlight() {
+    const ctx = this.ctx;
+    const g = ctx.createGain(); g.gain.value = 0;
+    const filter = ctx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 180;
+    filter.connect(g); g.connect(this.master);
+    const low = ctx.createOscillator(); low.type = 'sine'; low.frequency.value = 38;
+    const high = ctx.createOscillator(); high.type = 'sawtooth'; high.frequency.value = 76;
+    const highGain = ctx.createGain(); highGain.gain.value = 0.16;
+    low.connect(filter); high.connect(highGain); highGain.connect(filter); low.start(); high.start();
+    this.flight = { g, low, high, filter };
+    const profiles = {
+      ice: { frequency: 2400, q: 4, level: 0.055, tone: 880, toneLevel: 0.007, pulse: 0.19, type: 'bandpass' },
+      desert: { frequency: 560, q: 0.7, level: 0.11, tone: 73, toneLevel: 0.012, pulse: 0.11, type: 'lowpass' },
+      ocean: { frequency: 340, q: 0.8, level: 0.15, tone: 110, toneLevel: 0.016, pulse: 0.08, type: 'lowpass' },
+      station: { frequency: 1200, q: 1.8, level: 0.025, tone: 120, toneLevel: 0.024, pulse: 0.6, type: 'bandpass' },
+      space: { frequency: 180, q: 0.6, level: 0.018, tone: 55, toneLevel: 0.009, pulse: 0.035, type: 'lowpass' }
+    };
+    const buffer = this.noiseBuffer(4);
+    Object.entries(profiles).forEach(([key, profile]) => {
+      const source = ctx.createBufferSource(); source.buffer = buffer; source.loop = true;
+      const f = ctx.createBiquadFilter(); f.type = profile.type; f.frequency.value = profile.frequency; f.Q.value = profile.q;
+      const noiseGain = ctx.createGain(); noiseGain.gain.value = profile.level;
+      const tone = ctx.createOscillator(); tone.type = key === 'station' ? 'triangle' : 'sine'; tone.frequency.value = profile.tone;
+      const toneGain = ctx.createGain(); toneGain.gain.value = profile.toneLevel;
+      const mod = ctx.createGain(); mod.gain.value = 0.65;
+      const lfo = ctx.createOscillator(); lfo.frequency.value = profile.pulse;
+      const depth = ctx.createGain(); depth.gain.value = 0.3;
+      lfo.connect(depth); depth.connect(mod.gain);
+      const out = ctx.createGain(); out.gain.value = 0;
+      source.connect(f); f.connect(noiseGain); noiseGain.connect(mod);
+      tone.connect(toneGain); toneGain.connect(mod); mod.connect(out); out.connect(this.master);
+      source.start(); tone.start(); lfo.start();
+      this.ambient[key] = { out, source, tone, filter: f };
+    });
+  },
+  updateFlight(throttle = 0, speed = 0, location = 'space') {
+    const power = Number.isFinite(throttle) ? Math.max(0, Math.min(1, Math.abs(throttle))) : 0;
+    const velocity = Number.isFinite(speed) ? Math.abs(speed) : 0;
+    const identity = typeof location === 'string' ? location : location?.type || location?.id || location?.kind;
+    const key = ['ice', 'desert', 'ocean', 'station', 'space'].includes(identity) ? identity : 'space';
+    this._flightState = { throttle: power, speed: velocity, location: key };
+    if (!this.ctx || !this.flight) return;
+    const t = this.ctx.currentTime, motion = velocity / (velocity + 100);
+    this.flight.low.frequency.setTargetAtTime(38 + power * 48 + motion * 32, t, 0.15);
+    this.flight.high.frequency.setTargetAtTime(76 + power * 140 + motion * 70, t, 0.15);
+    this.flight.filter.frequency.setTargetAtTime(180 + power * 1100 + motion * 500, t, 0.2);
+    this.flight.g.gain.setTargetAtTime(0.015 + power * 0.09 + motion * 0.025, t, 0.18);
+    if (this._ambientKey !== key) {
+      this._ambientKey = key;
+      Object.entries(this.ambient).forEach(([name, layer]) => {
+        layer.out.gain.setTargetAtTime(name === key ? 1 : 0, t, 1.2);
+      });
+    }
+  }
+};
+
+const $ = id => document.getElementById(id);
+const clamp = (x,a,b) => Math.max(a,Math.min(b,x));
+const rand = (a,b) => a+Math.random()*(b-a);
+const fa = n => String(n).replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]);
+const V = (x=0,y=0,z=0) => new THREE.Vector3(x,y,z);
+function rng(seed){let s=seed>>>0;return ()=>{s+=0x6D2B79F5;let t=s;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296;};}
+const storage={get(k,f){try{return JSON.parse(localStorage.getItem('eh-open-'+k))??f;}catch{return f;}},set(k,v){try{localStorage.setItem('eh-open-'+k,JSON.stringify(v));}catch{}}};
+let rootSeed=storage.get('seed',null);
+if(!Number.isInteger(rootSeed)){rootSeed=crypto.getRandomValues(new Uint32Array(1))[0];storage.set('seed',rootSeed);}
+const saved=storage.get('settings',{});
+const settings={volume:clamp(Number(saved.volume??.5),0,1),muted:!!saved.muted,chase:!!saved.chase,letterbox:!!saved.letterbox,theme:clamp(Number(saved.theme)||0,0,3)};
+let records=storage.get('discoveries',[]);if(!Array.isArray(records))records=[];
+records=records.filter(r=>r&&typeof r.id==='string'&&typeof r.text==='string').slice(-400);
+let systemIndex=Math.max(0,Math.floor(Number(storage.get('system',0))||0));
+let started=false,elapsed=0,heat=0,overheated=false,shakeAmount=0,hullFlash=0,missionTime=0,earthTime=0;
+let transit=null,atmosphere=null,landed=null,nearHole=false,atmoMix=0,uiTime=0,looked=null,linger=0;
+let localThrottle=0,frameCount=0,fps=60,fpsTime=0,saveTime=0;
+const keys=new Set();const mouse={x:0,y:0};
+const touch={moveX:0,moveY:0,lookX:0,lookY:0,rise:0,drop:0,boost:0};
+const touchPointers=new Map();
+const mobileControls=matchMedia('(pointer:coarse) and (max-width:1100px)');
+function resetTouch(){
+ Object.keys(touch).forEach(k=>touch[k]=0);
+ for(const [id,record] of touchPointers){if(record.element.hasPointerCapture(id))record.element.releasePointerCapture(id);}
+ touchPointers.clear();
+ document.querySelectorAll('#touchControls .active,#touchControls .on').forEach(e=>e.classList.remove('active','on'));
+ document.querySelectorAll('#touchControls [aria-pressed]').forEach(e=>e.setAttribute('aria-pressed','false'));
+ document.querySelectorAll('.thumbKnob').forEach(e=>e.style.transform='translate(-50%,-50%)');
+}
+const themes=[['کهربا','#fff1d4','#ffb255','#803d91','#a8d3e0'],['یخ','#f0ffff','#86daff','#2e4979','#c8f8ff'],['اخگر','#fff7d8','#ff853c','#782d51','#ffcd80'],['بنفش','#fff0ff','#ca91ff','#3c286f','#e3baff']];
+const canvas=$('scene');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:false,preserveDrawingBuffer:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.35));renderer.setSize(innerWidth,innerHeight);
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;renderer.outputColorSpace=THREE.SRGBColorSpace;
+const scene=new THREE.Scene();const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.15,16000);
+const world=new CANNON.World({gravity:new CANNON.Vec3()});world.broadphase=new CANNON.SAPBroadphase(world);world.allowSleep=true;
+const hullMat=new CANNON.Material('hull'),terrainMat=new CANNON.Material('terrain');
+world.addContactMaterial(new CANNON.ContactMaterial(hullMat,terrainMat,{friction:.5,restitution:.12}));
+world.addContactMaterial(new CANNON.ContactMaterial(hullMat,hullMat,{friction:.18,restitution:.35}));
+const ship=new CANNON.Body({mass:6,shape:new CANNON.Sphere(2.4),material:hullMat,linearDamping:.22,angularDamping:.86,allowSleep:false});world.addBody(ship);
+const ambient=new THREE.AmbientLight(0x798bab,1.15),sun=new THREE.DirectionalLight(0xffe2b7,2.8);sun.position.set(-700,600,200);scene.add(ambient,sun);
+const shipLight=new THREE.SpotLight(0xc9e8ff,100,130,.7,.75,1.4);scene.add(shipLight,shipLight.target);
+const composer=new EffectComposer(renderer);composer.addPass(new RenderPass(scene,camera));
+const wideBloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.26,.75,.65);
+const tightBloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.3,.12,1.3);composer.addPass(wideBloom);composer.addPass(tightBloom);
+const vertex=`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`;
+const lens=new ShaderPass({uniforms:{tDiffuse:{value:null},center:{value:new THREE.Vector2(.5,.5)},strength:{value:0},aspect:{value:innerWidth/innerHeight},radius:{value:.01}},vertexShader:vertex,fragmentShader:`uniform sampler2D tDiffuse;uniform vec2 center;uniform float strength,aspect,radius;varying vec2 vUv;void main(){vec2 d=vUv-center;d.x*=aspect;float r=length(d);vec2 bend=d/max(r,.0001)*strength/(r*r+radius)*exp(-r*4.);bend.x/=aspect;gl_FragColor=texture2D(tDiffuse,clamp(vUv-bend,vec2(.001),vec2(.999)));}`});composer.addPass(lens);
+const film=new ShaderPass({uniforms:{tDiffuse:{value:null},time:{value:0}},vertexShader:vertex,fragmentShader:`uniform sampler2D tDiffuse;uniform float time;varying vec2 vUv;void main(){vec2 d=vUv-.5;vec3 c=texture2D(tDiffuse,vUv).rgb;c.r=texture2D(tDiffuse,vUv+d*.001).r;c.b=texture2D(tDiffuse,vUv-d*.001).b;c*=1.-.24*smoothstep(.22,.75,length(d));c+=(fract(sin(dot(vUv*1600.+time,vec2(12.9898,78.233)))*43758.5453)-.5)*.02;gl_FragColor=vec4(c,1.);}`});composer.addPass(film);composer.addPass(new OutputPass());
+function glowTexture(){const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d'),g=x.createRadialGradient(64,64,0,64,64,64);g.addColorStop(0,'#fff');g.addColorStop(.12,'#ffffffdd');g.addColorStop(.4,'#ffffff33');g.addColorStop(1,'#ffffff00');x.fillStyle=g;x.fillRect(0,0,128,128);return new THREE.CanvasTexture(c);}
+const glowMap=glowTexture();
+function sprite(color,size,opacity=1){const s=new THREE.Sprite(new THREE.SpriteMaterial({map:glowMap,color,transparent:true,opacity,depthWrite:false,blending:THREE.AdditiveBlending}));s.scale.set(size,size,1);return s;}
+function mesh(geo,color,metal=.4){return new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color,metalness:metal,roughness:.55}));}
+function skyTexture(seed){const r=rng(seed),c=document.createElement('canvas');c.width=1024;c.height=512;const x=c.getContext('2d');x.fillStyle='#02050d';x.fillRect(0,0,1024,512);for(let i=0;i<65;i++){const px=r()*1024,py=r()*512,rad=40+r()*170,g=x.createRadialGradient(px,py,0,px,py,rad);g.addColorStop(0,['#293c6555','#60383144','#40325744'][i%3]);g.addColorStop(1,'transparent');x.fillStyle=g;x.fillRect(0,0,1024,512);}for(let i=0;i<1500;i++){x.fillStyle=`rgba(200,224,255,${r()*.75})`;x.fillRect(r()*1024,r()*512,r()<.96?1:2,1);}const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;}
+const sky=new THREE.Mesh(new THREE.SphereGeometry(7000,32,16),new THREE.MeshBasicMaterial({map:skyTexture(rootSeed),side:THREE.BackSide,depthWrite:false,fog:false}));scene.add(sky);
+const starPos=new Float32Array(2400*3),starRng=rng(rootSeed+92);for(let i=0;i<2400;i++){const p=V(starRng()-.5,starRng()-.5,starRng()-.5).normalize().multiplyScalar(6100);starPos.set(p.toArray(),i*3);}
+const starGeo=new THREE.BufferGeometry();starGeo.setAttribute('position',new THREE.BufferAttribute(starPos,3));const stars=new THREE.Points(starGeo,new THREE.PointsMaterial({color:0xc6daff,size:5,map:glowMap,transparent:true,depthWrite:false}));scene.add(stars);
+const haze=new THREE.Mesh(new THREE.SphereGeometry(6000,24,16),new THREE.ShaderMaterial({side:THREE.BackSide,transparent:true,depthWrite:false,uniforms:{mixAmount:{value:0},tint:{value:new THREE.Color('#d9a766')}},vertexShader:`varying vec3 v;void main(){v=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`uniform float mixAmount;uniform vec3 tint;varying vec3 v;void main(){vec3 c=mix(tint*.25,tint,.4+.6*(1.-abs(v.y)));gl_FragColor=vec4(c,mixAmount);}`}));scene.add(haze);
+const craft=new THREE.Group();const hull=mesh(new THREE.BoxGeometry(3,1.4,6),0x9ba7b2,.75);craft.add(hull);
+const canopy=mesh(new THREE.BoxGeometry(2.2,.8,2),0x173647,.9);canopy.position.set(0,.85,-1);craft.add(canopy);
+for(const side of [-1,1]){const wing=mesh(new THREE.BoxGeometry(3,.35,3),0x566370,.75);wing.position.set(side*2.2,-.2,.4);wing.rotation.z=side*-.12;craft.add(wing);const engine=mesh(new THREE.CylinderGeometry(.6,.6,2,12),0x303943,.8);engine.rotation.x=Math.PI/2;engine.position.set(side*1.5,0,2);craft.add(engine);const flame=sprite('#8be1ff',3,.2);flame.position.set(side*1.5,0,3.3);craft.add(flame);}
+scene.add(craft);
+const cockpit=new THREE.Group();const cockpitMat=new THREE.MeshBasicMaterial({color:0x101e28});for(const side of [-1,1]){const strut=new THREE.Mesh(new THREE.BoxGeometry(.05,1.7,.07),cockpitMat);strut.position.set(side*.96,-.28,-1.45);strut.rotation.z=side*-.34;cockpit.add(strut);}const dash=new THREE.Mesh(new THREE.BoxGeometry(2.3,.17,.25),cockpitMat);dash.position.set(0,-.82,-1.25);cockpit.add(dash);camera.add(cockpit);scene.add(camera);
+let systemGroup=null,pois=[],planets=[],debris=[],staticBodies=[],station=null,hole=null,gateway=null,solarStar=null;
+const holePosition=V(-480,100,-950),GM=14500;
+function addStatic(body){world.addBody(body);staticBodies.push(body);return body;}
+function planetTexture(kind,seed){const c=document.createElement('canvas');c.width=512;c.height=256;const x=c.getContext('2d'),im=x.createImageData(512,256),r=rng(seed),phase=r()*20;const palettes={ice:[[37,70,89],[198,219,220]],desert:[[99,54,35],[210,168,106]],ocean:[[5,23,47],[50,118,137]],rocky:[[52,42,38],[142,128,116]],volcanic:[[24,12,10],[214,84,30]],verdant:[[18,54,34],[142,190,110]],ringed:[[88,74,112],[214,204,232]]};const [a,b]=palettes[kind];for(let y=0;y<256;y++)for(let u=0;u<512;u++){const lon=u/512*Math.PI*2,lat=(y/256-.5)*Math.PI,n=Math.sin(lon*7+Math.sin(lat*9+phase))*Math.cos(lat*13+phase)*.25+Math.sin(lon*19+lat*17+phase)*.15+Math.sin(lat*51+Math.sin(lon*11)*3)*.08;let t=clamp(.48+n+Math.pow(Math.abs(y/256-.5)*2,5)*.25,0,1);if(kind==='ocean')t=t>.71?.8:t*.5;if(kind==='volcanic')t=t>.62?1-(1-t)*.4:.25+t*.3;if(kind==='rocky')t=.35+t*.5;const i=(y*512+u)*4;for(let k=0;k<3;k++)im.data[i+k]=a[k]+(b[k]-a[k])*t;im.data[i+3]=255;}x.putImageData(im,0,0);if(kind==='ringed'||kind==='ice'){x.globalAlpha=.16;for(let b2=0;b2<9;b2++){x.fillStyle=b2%2?'#ffffff':'#000000';x.fillRect(0,r()*256,512,2+r()*7);}x.globalAlpha=1;}if(kind==='volcanic'){x.globalAlpha=.8;for(let k=0;k<26;k++){x.strokeStyle=`rgba(255,${90+r()*60|0},30,${.3+r()*.5})`;x.lineWidth=1+r()*2;x.beginPath();let px2=r()*512,py2=r()*256;x.moveTo(px2,py2);for(let j=0;j<5;j++){px2+=r()*80-40;py2+=r()*50-25;x.lineTo(px2,py2);}x.stroke();}x.globalAlpha=1;}const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;texture.wrapS=THREE.RepeatWrapping;return texture;}
+function planetBillboard(texture){const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');x.beginPath();x.arc(64,64,61,0,Math.PI*2);x.clip();x.drawImage(texture.image,0,0,128,128);const g=x.createLinearGradient(0,0,128,100);g.addColorStop(0,'#ffffff22');g.addColorStop(.5,'#00000011');g.addColorStop(1,'#000000ee');x.fillStyle=g;x.fillRect(0,0,128,128);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;}
+function addPOI(id,name,type,pos,radius,object,text){const p={id:`${systemIndex}:${id}`,name,type,pos:pos.clone(),radius,object,text,discovered:records.some(r=>r.id===`${systemIndex}:${id}`)};pois.push(p);return p;}
+function cleanupSystem(){if(!systemGroup)return;for(const b of staticBodies)world.removeBody(b);for(const d of debris)if(d.active)world.removeBody(d.body);staticBodies=[];debris=[];pois=[];planets=[];const geometries=new Set(),materials=new Set(),textures=new Set();systemGroup.traverse(o=>{if(o.geometry)geometries.add(o.geometry);for(const m of (Array.isArray(o.material)?o.material:[o.material]).filter(Boolean)){materials.add(m);if(m.map&&m.map!==glowMap)textures.add(m.map);}});geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());scene.remove(systemGroup);}
+function buildSystem(index){cleanupSystem();systemIndex=index;storage.set('system',index);const seed=(rootSeed+Math.imul(index,7919))>>>0,r=rng(seed);systemGroup=new THREE.Group();scene.add(systemGroup);sky.material.map.dispose();sky.material.map=skyTexture(seed);const names=['سکوت','آذر','سپیده','نیلوفر','مهتاب','سایه','نقره','دوران'];
+const specs=[
+ {kind:'desert',pos:V(0,-155,180),radius:145},
+ {kind:'ice',pos:V(640+r()*180,120+r()*80,-650),radius:115+r()*30},
+ {kind:'ocean',pos:V(-850-r()*240,-100,-130),radius:160+r()*30},
+ {kind:'rocky',pos:V(420,-320,-1180),radius:95,moon:false},
+ {kind:'verdant',pos:V(-380,240,-1520),radius:135,moon:false},
+ {kind:'ringed',pos:V(1120,-60,-1180),radius:170,ring:true,moon:false},
+ {kind:'volcanic',pos:V(-1420,-320,-620),radius:130,moon:false},
+ {kind:'rocky',pos:V(940,320,-1720),radius:70,moon:false},
+ {kind:'ice',pos:V(-1180,420,-1740),radius:75,moon:false},
+ {kind:'desert',pos:V(160,-560,-1900),radius:82,moon:false},
+ {kind:'rocky',pos:V(640+r()*180,120+r()*80,-650),radius:26,moonOf:1,offset:V(190,30,120)},
+ {kind:'verdant',pos:V(-380,240,-1520),radius:22,moonOf:4,offset:V(-150,-40,160)}
+];
+const flavor={
+ ice:'رسوبات بلوری تا افق ادامه دارند. در نمونهٔ صوتی، تنها انقباض یخ ثبت شد.',
+ desert:'گرد سیلیس در لایه‌های هوا معلق است. هیچ رد تازه‌ای بر سطح دیده نمی‌شود.',
+ ocean:'آب شور و کم‌عمق در زیر سفینه. پژواک دوردست با دورهٔ موج‌ها هماهنگ نیست.',
+ rocky:'دهانه‌های کهن، باد در شکاف‌ها آواز می‌خواند. سنگ‌نوشته‌ای طبیعی، بی‌خط.',
+ volcanic:'پوستهٔ تازه بر گدازه. گرمای زمین در نمونه‌ها ثبت شد؛ زلزله‌های خفیف دوره‌ای.',
+ verdant:'پوشش گیاهی خودجوش، بی‌بذر. کلروفیل فعال است؛ ردی از جانور دیده نشد.',
+ ringed:'حلقه‌های یخی از مدار عبور می‌کنند. منشأ تقسیم قمر باستان نامشخص است.'
+};
+const atmoTint={desert:'#dfb380',ice:'#94dafa',ocean:'#7fb8d2',rocky:'#b09a86',volcanic:'#e07840',verdant:'#8fd0a0',ringed:'#c8b8e8'};
+specs.forEach((s,i)=>{
+ const isMoon=typeof s.moonOf==='number';
+ if(isMoon)s.pos=specs[s.moonOf].pos.clone().add(s.offset);
+ if(index>0&&!isMoon){s.pos.x+=Math.sin(index+i)*160;s.pos.z-=r()*150;}
+ const g=new THREE.Group();g.position.copy(s.pos);
+ const texture=planetTexture(s.kind,seed+i*17);
+ const mat=new THREE.MeshStandardMaterial({map:texture,roughness:s.kind==='ocean'?.28:.95,metalness:s.kind==='ice'?.15:0,transparent:true});
+ const globe=new THREE.Mesh(new THREE.SphereGeometry(s.radius,64,40),mat);g.add(globe);
+ const far=new THREE.Sprite(new THREE.SpriteMaterial({map:planetBillboard(texture),transparent:true,depthWrite:false}));
+ far.scale.setScalar(s.radius*2.04);g.add(far);
+ const atmo=new THREE.Mesh(new THREE.SphereGeometry(s.radius*1.045,40,24),new THREE.ShaderMaterial({transparent:true,depthWrite:false,side:THREE.BackSide,blending:THREE.AdditiveBlending,uniforms:{tint:{value:new THREE.Color(atmoTint[s.kind]||'#94dafa')}},vertexShader:`varying vec3 n,v;void main(){vec4 p=modelViewMatrix*vec4(position,1.);n=normalize(normalMatrix*normal);v=normalize(-p.xyz);gl_Position=projectionMatrix*p;}`,fragmentShader:`uniform vec3 tint;varying vec3 n,v;void main(){float a=pow(1.-abs(dot(normalize(n),normalize(v))),3.);gl_FragColor=vec4(tint,a*.55);}`}));
+ g.add(atmo);
+ let details=null;
+ if(s.ring){
+  details=new THREE.Group();g.add(details);
+  const ringGeo=new THREE.RingGeometry(s.radius*1.6,s.radius*2.5,80);
+  const ringMat=new THREE.MeshBasicMaterial({color:'#cdbfe8',side:THREE.DoubleSide,transparent:true,opacity:.42,depthWrite:false});
+  const ring=new THREE.Mesh(ringGeo,ringMat);ring.rotation.x=Math.PI/2+.18;details.add(ring);
+  const ring2=new THREE.Mesh(new THREE.RingGeometry(s.radius*2.6,s.radius*2.85,80),new THREE.MeshBasicMaterial({color:'#9a8cc0',side:THREE.DoubleSide,transparent:true,opacity:.25,depthWrite:false}));
+  ring2.rotation.x=Math.PI/2+.18;details.add(ring2);
+ }
+ if(!isMoon&&s.radius>=60){
+  details=details||new THREE.Group();g.add(details);
+  const rockCount=90,rockGeo=new THREE.DodecahedronGeometry(1);
+  const rocks=new THREE.InstancedMesh(rockGeo,new THREE.MeshStandardMaterial({color:s.kind==='volcanic'?'#4a2018':s.kind==='verdant'?'#3e6b45':'#6a6a6a',roughness:1}),rockCount);
+  const m4=new THREE.Matrix4(),q4=new THREE.Quaternion(),sc=new THREE.Vector3();
+  for(let k=0;k<rockCount;k++){
+   const th=r()*Math.PI*2,ph=Math.acos(2*r()-1),rr=s.radius*(1.001+r()*.004);
+   const dir=V(Math.sin(ph)*Math.cos(th),Math.cos(ph),Math.sin(ph)*Math.sin(th));
+   m4.compose(dir.clone().multiplyScalar(rr),new THREE.Quaternion().setFromEuler(new THREE.Euler(r()*7,r()*7,r()*7)),sc.setScalar(s.radius*(.006+r()*.012)));
+   rocks.setMatrixAt(k,m4);
+  }
+  details.add(rocks);
+ }
+ systemGroup.add(g);
+ const body=addStatic(new CANNON.Body({mass:0,shape:new CANNON.Sphere(s.radius),material:terrainMat,position:new CANNON.Vec3(s.pos.x,s.pos.y,s.pos.z)}));
+ const name=names[(Math.floor(r()*names.length)+i)%names.length]+(isMoon?' (قمر)':'')+' '+fa(i+1+index*3);
+ const poi=addPOI('planet'+i,name,s.kind,s.pos,s.radius,globe,flavor[s.kind]);
+ planets.push({...s,group:g,globe,far,atmo,body,poi,details,isMoon});
+});
+const sunPos=V(-1700,700,-2400),sunRadius=260;
+{
+ const sg2=new THREE.Group();sg2.position.copy(sunPos);
+ const sunUniforms={time:{value:0}};
+ const core=new THREE.Mesh(new THREE.SphereGeometry(sunRadius,48,32),new THREE.ShaderMaterial({uniforms:sunUniforms,vertexShader:`varying vec3 p;void main(){p=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`uniform float time;varying vec3 p;void main(){float n=sin(p.x*.02+time*.6)*sin(p.y*.025+time*.4)*sin(p.z*.018+time*.5);vec3 c=mix(vec3(1.,.62,.22),vec3(1.,.95,.82),.5+.5*n);c+=vec3(1.,.5,.15)*pow(max(n,0.),3.)*1.6;gl_FragColor=vec4(c,1.);}`}));
+ sg2.add(core);
+ const corona=sprite('#ffb765',sunRadius*4.4,.34);sg2.add(corona);
+ const corona2=sprite('#ffe2b0',sunRadius*8.5,.12);sg2.add(corona2);
+ const sunLight=new THREE.PointLight('#ffd9a0',90000,9000,1.6);sg2.add(sunLight);
+ const orbitRing=new THREE.Mesh(new THREE.RingGeometry(sunRadius*1.42,sunRadius*1.5,64),new THREE.MeshBasicMaterial({color:'#ffc783',transparent:true,opacity:.28,side:THREE.DoubleSide,depthWrite:false}));
+ orbitRing.rotation.x=Math.PI/2;sg2.add(orbitRing);
+ systemGroup.add(sg2);
+ addStatic(new CANNON.Body({mass:0,shape:new CANNON.Sphere(sunRadius*1.18),material:terrainMat,position:new CANNON.Vec3(sunPos.x,sunPos.y,sunPos.z)}));
+ solarStar={group:sg2,core,corona,corona2,pos:sunPos,radius:sunRadius,uniforms:sunUniforms,poi:addPOI('sun','ستارهٔ پریان','sun',sunPos,sunRadius,core,'سطح ستاره در تلاطم است. سنسورها در فاصلهٔ نزدیک اشباع می‌شوند؛ مدار امن حفظ شود.')};
+}
+const R=62,hg=new THREE.Group();hg.position.copy(holePosition);const core=new THREE.Mesh(new THREE.SphereGeometry(R,64,40),new THREE.MeshBasicMaterial({color:0x000000}));hg.add(core);const ringMats=[];for(let i=0;i<2;i++){const m=new THREE.MeshBasicMaterial({color:i?'#ffe1a5':'#fff3d5',transparent:true,opacity:.9,blending:THREE.AdditiveBlending});ringMats.push(m);const tor=new THREE.Mesh(new THREE.TorusGeometry(R*(1.12+i*.055),.7+i*.4,8,128),m);tor.rotation.x=Math.PI/2+.13;hg.add(tor);}const halo=sprite('#ffc486',R*5,.19);hg.add(halo);const flare=sprite('#ffd499',R*13,.23);flare.scale.y=R*.14;hg.add(flare);const diskGeo=new THREE.BufferGeometry(),pos=new Float32Array(7000*3),colors=new Float32Array(7000*3),meta=[];for(let i=0;i<7000;i++){const radius=R*1.35+Math.pow(r(),1.8)*R*4.3,angle=r()*Math.PI*2,y=(r()-.5)*3;meta.push({radius,angle,y});pos.set([Math.cos(angle)*radius,y,Math.sin(angle)*radius],i*3);}diskGeo.setAttribute('position',new THREE.BufferAttribute(pos,3));diskGeo.setAttribute('color',new THREE.BufferAttribute(colors,3));const disk=new THREE.Points(diskGeo,new THREE.PointsMaterial({map:glowMap,size:2.5,vertexColors:true,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));disk.rotation.x=.13;hg.add(disk);const rings=[];for(let i=0;i<3;i++){const ring=new THREE.Mesh(new THREE.TorusGeometry(R*(2+i*.7),.14,6,100),new THREE.MeshBasicMaterial({color:'#a8c9ed',transparent:true,opacity:.15,blending:THREE.AdditiveBlending}));ring.rotation.set(Math.PI/2+i*.11,0,i*.2);hg.add(ring);rings.push(ring);}const light=new THREE.PointLight('#ffc885',18000,2200,1.8);hg.add(light);systemGroup.add(hg);addStatic(new CANNON.Body({mass:0,shape:new CANNON.Sphere(R*.7),material:terrainMat,position:new CANNON.Vec3(holePosition.x,holePosition.y,holePosition.z)}));hole={group:hg,R,disk,diskGeo,meta,ringMats,rings,halo,flare,light,poi:addPOI('hole','گارگانتوا','hole',holePosition,R,core,'تابش از مدارهای درونی بازمی‌گردد. اختلاف ساعت با مرجع زمینی رو به افزایش است.')};
+const sg=new THREE.Group(),stationPos=V(0,65,-220);const tor=mesh(new THREE.TorusGeometry(34,1.5,10,80),0xa5aeb8,.82);sg.add(tor);const stationBody=new CANNON.Body({mass:0,type:CANNON.Body.KINEMATIC,material:hullMat,position:new CANNON.Vec3(...stationPos.toArray())});for(let i=0;i<16;i++){const a=i*Math.PI/8,p=V(Math.cos(a)*34,Math.sin(a)*34,0),mod=mesh(new THREE.BoxGeometry(5,7,8),i%2?0x8394a5:0xb7bdc2,.72);mod.position.copy(p);mod.rotation.z=a;sg.add(mod);const q=new CANNON.Quaternion();q.setFromEuler(0,0,a);stationBody.addShape(new CANNON.Box(new CANNON.Vec3(2.5,3.5,4)),new CANNON.Vec3(...p.toArray()),q);const l=sprite(i%3?'#a5d5ef':'#ffc783',2.4,.8);l.position.copy(p).add(V(0,0,4.2));sg.add(l);}sg.position.copy(stationPos);systemGroup.add(sg);stationBody.angularVelocity.z=.025;addStatic(stationBody);station={group:sg,body:stationBody,pos:stationPos,poi:addPOI('station','ایستگاه اِندورنس','station',stationPos,40,tor,'حلقه هنوز می‌چرخد. فشار زیستگاه صفر است؛ چراغ‌های راهنما روشن مانده‌اند.')};
+const shapes=[new THREE.TetrahedronGeometry(3),new THREE.OctahedronGeometry(3),new THREE.IcosahedronGeometry(3),new THREE.BoxGeometry(4,4,4),new THREE.TorusKnotGeometry(2,.65,32,6),new THREE.DodecahedronGeometry(3),new THREE.ConeGeometry(3,5,7)];
+for(let i=0;i<30;i++){const orbit=i<12;const radius=R*(3.5+r()*2.5),a=r()*Math.PI*2;const p=orbit?holePosition.clone().add(V(Math.cos(a)*radius,(r()-.5)*40,Math.sin(a)*radius)):V((r()-.5)*380,20+(r()-.5)*130,-320-r()*360);const m=mesh(shapes[i%shapes.length],new THREE.Color().setHSL(.55+r()*.15,.18,.4+r()*.25),.6);m.position.copy(p);systemGroup.add(m);const b=new CANNON.Body({mass:3,shape:new CANNON.Sphere(3),material:hullMat,position:new CANNON.Vec3(...p.toArray()),linearDamping:orbit?.001:.08,angularDamping:.08});if(orbit){const speed=Math.sqrt(GM/radius);b.velocity.set(-Math.sin(a)*speed,0,Math.cos(a)*speed);}b.angularVelocity.set(r()*.2,r()*.2,r()*.2);const rec={mesh:m,body:b,active:false,orbit,baseColor:m.material.color.clone()};debris.push(rec);b.addEventListener('collide',e=>impactBody(b,e));if(!orbit&&i%5===0)rec.poi=addPOI('debris'+i,'قطعهٔ بدنه '+fa(i),'debris',p,5,m,'آلیاژ دست‌ساخت؛ شمارهٔ بدنه محو شده است. سیگنال حیاتی ثبت نشد.');}
+for(let i=0;i<2;i++){const p=stationPos.clone().add(V(i?15:-16,-4,8)),m=mesh(new THREE.BoxGeometry(1.3,4,1),0x52606b,.8);m.position.copy(p);systemGroup.add(m);const eye=sprite('#cbeaff',.7,.7);eye.position.set(0,1.3,.55);m.add(eye);const body=new CANNON.Body({mass:3,shape:new CANNON.Box(new CANNON.Vec3(.65,2,.5)),material:hullMat,position:new CANNON.Vec3(...p.toArray()),linearDamping:.2,angularDamping:.4});debris.push({mesh:m,body,active:false,orbit:false,baseColor:m.material.color.clone(),poi:addPOI('robot'+i,i?'کیس':'تارس','debris',p,3,m,i?'کیس: در انتظار یک دستور تازه.':'تارس: سکوت را به حساب نبود شوخ‌طبعی نگذارید.')});body.addEventListener('collide',e=>impactBody(body,e));}
+const gp=V(850+r()*150,170,-1650-r()*200),gg=new THREE.Group();gg.position.copy(gp);const gs=new THREE.Mesh(new THREE.SphereGeometry(38,32,24),new THREE.MeshBasicMaterial({color:0x071426,transparent:true,opacity:.8}));gg.add(gs);const gatewayRings=[];for(let i=0;i<5;i++){const ring=new THREE.Mesh(new THREE.TorusGeometry(40+i*1.2,.35,6,80),new THREE.MeshBasicMaterial({color:'#a9dafb',transparent:true,opacity:.65,blending:THREE.AdditiveBlending}));ring.rotation.set(i*.24,i*.35,0);gg.add(ring);gatewayRings.push(ring);}const gatewayGlow=sprite('#81beff',160,.3);gg.add(gatewayGlow);systemGroup.add(gg);gateway={group:gg,pos:gp,rings:gatewayRings,poi:addPOI('gate','گذرگاه خاموش','wormhole',gp,43,gs,'انحنای فضا پایدار است. آن سوی گذرگاه، آسمانی دیگر ثبت شده است.')};applyTheme();renderLog();nearHole=false;}
+const tunnel=new THREE.Group();tunnel.visible=false;scene.add(tunnel);for(let i=0;i<26;i++){const ring=new THREE.Mesh(new THREE.TorusGeometry(12+Math.sin(i)*2,.14,6,72),new THREE.MeshBasicMaterial({color:new THREE.Color().setHSL(.55+i*.002,.6,.6),transparent:true,opacity:.7,blending:THREE.AdditiveBlending}));ring.position.z=-i*15;tunnel.add(ring);}const streamGeo=new THREE.BufferGeometry(),streamPos=new Float32Array(2000*3);for(let i=0;i<2000;i++){const a=rand(0,Math.PI*2),r=rand(7,24);streamPos.set([Math.cos(a)*r,Math.sin(a)*r,rand(-390,15)],i*3);}streamGeo.setAttribute('position',new THREE.BufferAttribute(streamPos,3));tunnel.add(new THREE.Points(streamGeo,new THREE.PointsMaterial({map:glowMap,color:'#b8ddff',size:.4,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending})));
+const wander=sprite('#badcff',8,.4);scene.add(wander);let wanderTime=0;
+function toast(text){const el=document.createElement('div');el.className='toast';el.textContent=text;$('toasts').append(el);setTimeout(()=>{el.classList.add('out');setTimeout(()=>el.remove(),450);},3400);}
+function flash(amount=.5){$('flash').style.opacity=amount;setTimeout(()=>$('flash').style.opacity=0,90);}
+function reveal(text){$('discover').textContent=text;$('discover').classList.add('on');clearTimeout(reveal.timer);reveal.timer=setTimeout(()=>$('discover').classList.remove('on'),6500);}
+function logRecord(id,name,text){if(records.some(r=>r.id===id))return;records.push({id,name,text,system:systemIndex,date:Date.now()});records=records.slice(-400);storage.set('discoveries',records);renderLog();}
+function discover(p){if(p.discovered)return;p.discovered=true;logRecord(p.id,p.name,p.text);AudioSys.chime();$('scanSweep').classList.remove('scanning');void $('scanSweep').offsetWidth;$('scanSweep').classList.add('scanning');reveal(p.name+' — '+p.text);}
+function renderLog(){const entries=$('logEntries');entries.replaceChildren();for(const r of [...records].reverse()){const el=document.createElement('article'),title=document.createElement('strong'),text=document.createElement('p');title.textContent=r.name||'ثبت مأموریت';text.textContent=r.text;el.append(title,text);entries.append(el);}}
+function impactBody(body,e){const t=performance.now();if(t-(body.lastImpact||0)<250)return;const speed=Math.abs(e.contact.getImpactVelocityAlongNormal());if(speed<.8)return;body.lastImpact=t;if(body.position.distanceTo(ship.position)<160)AudioSys.impact(speed);if(body===ship){shakeAmount=Math.min(.4,speed*.02);hullFlash=1;}}
+ship.addEventListener('collide',e=>impactBody(ship,e));
+function enterAtmosphere(p){atmosphere=p;AudioSys.organSwell();AudioSys.setWind(p.kind==='desert');discover(p.poi);logRecord(p.poi.id+':atmo',p.poi.name+' — جو','ورود آرام به لایهٔ جوی تأیید شد. '+p.poi.text);reveal(p.poi.name+' — ورود به جو');}
+function leaveAtmosphere(p){if(atmosphere!==p)return;atmosphere=null;landed=null;AudioSys.setWind(false);AudioSys.organSwell();reveal('خروج از جو — پیشران آزاد');}
+function updateEnvironment(dt){let closest=null,altitude=Infinity;for(const p of planets){const alt=V().copy(ship.position).distanceTo(p.pos)-p.radius;if(alt<altitude){altitude=alt;closest=p;}}if(!atmosphere&&altitude<closest.radius*.38)enterAtmosphere(closest);if(atmosphere&&V().copy(ship.position).distanceTo(atmosphere.pos)>atmosphere.radius*1.48)leaveAtmosphere(atmosphere);const launching=autoLand?.mode==='launch'||keys.has('space')||touch.rise;
+if(altitude<2.8&&ship.velocity.length()<1.5&&!launching){
+ touchdownTime+=dt;
+ if(touchdownTime>.35&&!surfaceHold){secureLanding(closest);autoLand=null;}
+ if(surfaceHold&&!records.some(r=>r.id===closest.poi.id+':surface')){discover(closest.poi);logRecord(closest.poi.id+':surface',closest.poi.name+' — سطح',closest.poi.text);reveal('تماس پایدار با سطح — '+closest.poi.text);AudioSys.chime();}
+}else{touchdownTime=0;if(altitude>5&&!surfaceHold)landed=null;}ship.linearDamping=atmosphere?.34:.22;const target=atmosphere?clamp(1-altitude/(atmosphere.radius*.42),0,1)*.98:0;atmoMix+=(target-atmoMix)*(1-Math.exp(-dt*2));haze.material.uniforms.mixAmount.value=atmoMix;haze.material.uniforms.tint.value.set(atmosphere?.kind==='desert'?'#d8a768':atmosphere?.kind==='ocean'?'#7699b2':'#b8d5dd');stars.material.opacity=1-atmoMix;sky.material.color.setScalar(1-atmoMix*.8);ambient.intensity=1.15+atmoMix*.6;const dist=ship.position.distanceTo(new CANNON.Vec3(...holePosition.toArray()));if(dist<650&&!nearHole){nearHole=true;AudioSys.organSwell();}if(dist>800)nearHole=false;AudioSys.setTick(dist<700);const dilation=clamp(1-Math.sqrt(Math.max(.04,1-hole.R*1.5/Math.max(dist,hole.R*1.6))),0,.85);AudioSys.setDilation(dilation);missionTime+=dt*(1-dilation);earthTime+=dt;const location=atmosphere?atmosphere.kind:V().copy(ship.position).distanceTo(station.pos)<180?'station':'space';AudioSys.updateFlight(localThrottle,ship.velocity.length(),location);return altitude;}
+function applyGravity(body,dt,player=false){const dx=holePosition.x-body.position.x,dy=holePosition.y-body.position.y,dz=holePosition.z-body.position.z,r=Math.sqrt(dx*dx+dy*dy+dz*dz),f=GM*body.mass/Math.max(r*r,2000);body.applyForce(new CANNON.Vec3(dx/r*f,dy/r*f,dz/r*f));if(player){for(const p of planets){const delta=new CANNON.Vec3(p.pos.x-body.position.x,p.pos.y-body.position.y,p.pos.z-body.position.z),d=delta.length();if(d<p.radius*1.6){const accel=9.2*clamp((p.radius*1.6-d)/(p.radius*.4),0,1);delta.scale(body.mass*accel/Math.max(d,1),delta);body.applyForce(delta);}}}if(r<hole.R*1.08){if(player){const n=V(-dx,-dy,-dz).normalize();ship.position.set(holePosition.x+n.x*hole.R*2,holePosition.y+n.y*hole.R*2,holePosition.z+n.z*hole.R*2);ship.velocity.set(n.x*45,n.y*45,n.z*45);flash(.65);AudioSys.whoosh();reveal('سامانهٔ ایمنی: مدار خروج خودکار برقرار شد.');}else{const angle=rand(0,Math.PI*2),radius=hole.R*5;body.position.set(holePosition.x+Math.cos(angle)*radius,holePosition.y+rand(-20,20),holePosition.z+Math.sin(angle)*radius);const v=Math.sqrt(GM/radius);body.velocity.set(-Math.sin(angle)*v,0,Math.cos(angle)*v);body.wakeUp();consumption=.7;}}}
+let consumption=0;
+function inputOpen(){return $('panel').classList.contains('open')||$('systemMap').classList.contains('open')||$('logPanel').classList.contains('open');}
+let autoLand=null,surfaceHold=null,touchdownTime=0;
+function secureLanding(p){
+ const normal=V().copy(ship.position).sub(p.pos).normalize();
+ surfaceHold={planet:p,normal};landed=p;
+ const forward=V(0,0,-1).applyQuaternion(ship.quaternion);
+ forward.addScaledVector(normal,-forward.dot(normal));
+ if(forward.lengthSq()<.01)forward.copy(V(1,0,0)).addScaledVector(normal,-normal.x);
+ if(forward.lengthSq()<.01)forward.copy(V(0,0,1)).addScaledVector(normal,-normal.z);
+ forward.normalize();
+ ship.quaternion.copy(new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(forward.clone().cross(normal).normalize(),normal,forward.negate())));
+ const position=p.pos.clone().addScaledVector(normal,p.radius+2.41);
+ ship.position.set(...position.toArray());ship.velocity.setZero();ship.angularVelocity.setZero();
+ ship.aabbNeedsUpdate=true;touchdownTime=0;
+}
+function releaseSurface(){surfaceHold=null;landed=null;touchdownTime=0;ship.wakeUp();}
+function nearestPlanet(){let best=null,bd=Infinity;for(const p of planets){const d=V().copy(ship.position).distanceTo(p.pos)-p.radius;if(d<bd){bd=d;best=p;}}return {planet:best,alt:bd};}
+function startAutoLand(){
+ if(!started||transit)return;
+ if(autoLand){cancelAutoLand();return;}
+ const {planet,alt}=nearestPlanet();
+ if(alt>planet.radius*1.3){toast('برای فرود به سیاره نزدیک‌تر شوید؛ محدودهٔ فرود در ارتفاع‌سنج مشخص است.');return;}
+ autoLand={target:planet,mode:'land'};keys.clear();mouse.x=mouse.y=0;
+ setPanel('panel',false);reveal('کاهش سرعت و هم‌ترازی با سطح — '+planet.poi.name);
+}
+function startTakeoff(){
+ if(!started||transit)return;
+ const {planet,alt}=nearestPlanet();
+ if(alt>planet.radius*.5){toast('سفینه از سطح فاصله دارد؛ پیشران آزاد است.');return;}
+ releaseSurface();autoLand={target:planet,mode:'launch'};keys.clear();mouse.x=mouse.y=0;
+ setPanel('panel',false);reveal('برخاستن از '+planet.poi.name+' — پیشران عمودی فعال');
+}
+function cancelAutoLand(){if(!autoLand)return;autoLand=null;if(!transit)toast('هدایت دستی فعال شد.');}
+function autoLandStep(dt){
+ const p=autoLand.target,up=V().copy(ship.position).sub(p.pos).normalize();
+ const altitude=V().copy(ship.position).distanceTo(p.pos)-p.radius;
+ const launching=autoLand.mode==='launch';
+ const descent=clamp((altitude-2.4)*.45,.35,28);
+ const desired=up.clone().multiplyScalar(launching?24:-descent);
+ const acceleration=desired.sub(V().copy(ship.velocity)).multiplyScalar(2.8);
+ if(acceleration.length()>65)acceleration.setLength(65);
+ const gravity=V().copy(ship.force).multiplyScalar(1/ship.mass);
+ acceleration.sub(gravity);
+ ship.applyForce(new CANNON.Vec3(...acceleration.multiplyScalar(ship.mass).toArray()));
+ const localUp=V(0,1,0).applyQuaternion(ship.quaternion);
+ const error=localUp.clone().cross(up);
+ if(error.lengthSq()<.00001&&localUp.dot(up)<0)error.copy(V(1,0,0).applyQuaternion(ship.quaternion));
+ const torque=error.multiplyScalar(95).sub(V().copy(ship.angularVelocity).multiplyScalar(48));
+ ship.torque.set(...torque.toArray());
+ localThrottle=.65;
+ if(launching&&altitude>p.radius*.52){autoLand=null;reveal('ارتفاع امن — کنترل با شماست.');}
+ if(!launching&&altitude<2.65&&ship.velocity.length()<1.2){
+  autoLand=null;secureLanding(p);reveal('فرود نرم تأیید شد — '+p.poi.name);toast('برخاستن با T یا دکمهٔ برخاستن');
+ }
+}
+function flyStep(dt){
+ if(surfaceHold&&!inputOpen()&&(keys.has('space')||touch.rise))releaseSurface();
+ const enabled=started&&!transit&&!inputOpen()&&!autoLand&&!surfaceHold,key=k=>enabled&&keys.has(k)?1:0;const boost=enabled&&(key('shift')||touch.boost)&&(key('w')||touch.moveY<-.1)&&!overheated;heat=clamp(heat+(boost?28:-15)*dt,0,100);if(heat>=100)overheated=true;if(heat<35)overheated=false;const forward=enabled?clamp(key('w')-key('s')-touch.moveY,-1,1):0,strafe=enabled?clamp(key('d')-key('a')+touch.moveX,-1,1):0,vertical=enabled?key('space')-key('control')+touch.rise-touch.drop:0;localThrottle=Math.min(1,Math.abs(forward)+Math.abs(strafe)*.5+Math.abs(vertical)*.7);const force=new CANNON.Vec3(strafe*18*ship.mass,vertical*25*ship.mass,-forward*(boost?95:26)*ship.mass);ship.applyLocalForce(force);const target=new CANNON.Vec3((key('arrowup')-key('arrowdown'))*.68+mouse.y-touch.lookY*.9,(key('arrowleft')-key('arrowright'))*.68-mouse.x-touch.lookX*.9,(key('q')-key('e'))*.6);if(!enabled)target.setZero();const localOmega=ship.quaternion.conjugate().vmult(ship.angularVelocity);const localTorque=new CANNON.Vec3((target.x-localOmega.x)*32,(target.y-localOmega.y)*32,(target.z-localOmega.z)*32);ship.quaternion.vmult(localTorque,ship.torque);const speed=ship.velocity.length();if(speed>185)ship.applyForce(ship.velocity.scale(-ship.mass*(speed-185)*.025));applyGravity(ship,dt,true);if(autoLand)autoLandStep(dt);for(const d of debris)if(d.active){if(d.orbit)applyGravity(d.body,dt);const dist=d.body.position.distanceTo(ship.position);if(dist>650){world.removeBody(d.body);d.active=false;}}if(surfaceHold){ship.force.setZero();ship.torque.setZero();ship.velocity.setZero();ship.angularVelocity.setZero();ship.sleep();localThrottle=0;}
+world.step(dt);
+if(surfaceHold){const p=surfaceHold.planet.pos.clone().addScaledVector(surfaceHold.normal,surfaceHold.planet.radius+2.41);ship.position.set(...p.toArray());}
+}
+function updateDebris(){for(const d of debris){const dist=d.body.position.distanceTo(ship.position);if(!d.active&&dist<560){world.addBody(d.body);d.active=true;d.body.wakeUp();}if(d.active){d.mesh.position.copy(d.body.position);d.mesh.quaternion.copy(d.body.quaternion);}d.mesh.visible=dist<850;const r=d.mesh.position.distanceTo(holePosition);if(d.orbit&&r<hole.R*3.2){const stretch=clamp(1+(hole.R*3.2-r)/55,1,3.5);d.mesh.lookAt(holePosition);d.mesh.scale.set(1/Math.sqrt(stretch),1/Math.sqrt(stretch),stretch);}else d.mesh.scale.setScalar(1);if(d.poi)d.poi.pos.copy(d.mesh.position);if(d.flashUntil){d.mesh.material.emissive.set('#a8d3e0');d.mesh.material.emissiveIntensity=Math.max(0,(d.flashUntil-elapsed)*2);if(d.flashUntil<elapsed)d.flashUntil=0;}}}
+function beginTransit(){if(transit)return;resetTouch();releaseSurface();autoLand=null;discover(gateway.poi);transit={t:0,swapped:false};keys.clear();mouse.x=mouse.y=0;systemGroup.visible=false;tunnel.visible=true;craft.visible=false;AudioSys.whoosh();AudioSys.organSwell();reveal('عبور از خمیدگی — پیوند با آسمان دیگر');}
+function updateTransit(dt){transit.t+=dt;const t=transit.t,c=Math.min(t/6.5,1);tunnel.position.copy(ship.position);camera.position.copy(ship.position).add(V(0,0,-c*345));camera.quaternion.identity();camera.lookAt(camera.position.clone().add(V(0,0,-1)));tunnel.children.forEach((o,i)=>{if(o.isMesh)o.rotation.z+=dt*(i%2?-.1:.13);});lens.uniforms.center.value.set(.5,.5);lens.uniforms.strength.value=.007*Math.sin(c*Math.PI);if(t>3&&!transit.swapped){transit.swapped=true;flash(.9);AudioSys.whoosh();}if(t>=6.5){const next=systemIndex+1;buildSystem(next);const p=V(0,80,160);ship.position.set(...p.toArray());ship.quaternion.set(0,0,0,1);ship.velocity.set(0,0,-12);ship.angularVelocity.setZero();systemGroup.visible=true;tunnel.visible=false;transit=null;atmosphere=null;atmoMix=0;landed=null;lens.uniforms.strength.value=0;flash(.6);reveal('سامانهٔ '+fa(systemIndex+1)+' — نقشه هنوز خالی است.');savePosition();}}
+const ray=new THREE.Raycaster();
+function poke(){if(transit||!started)return;const forward=V(0,0,-1).applyQuaternion(camera.quaternion);ray.set(camera.position,forward);const hits=ray.intersectObjects(debris.filter(d=>d.active).map(d=>d.mesh),false);if(!hits.length||hits[0].distance>150)return;const d=debris.find(d=>d.mesh===hits[0].object);const impulse=forward.multiplyScalar(42);d.body.applyImpulse(new CANNON.Vec3(...impulse.toArray()));d.body.angularVelocity.set(rand(-2,2),rand(-2,2),rand(-2,2));d.flashUntil=elapsed+.5;AudioSys.blip();}
+function updateDiscovery(dt){if(transit||inputOpen()){linger=0;return;}const f=V(0,0,-1).applyQuaternion(camera.quaternion);let best=null,alignment=.97;for(const p of pois){const delta=p.pos.clone().sub(camera.position),dist=delta.length(),dot=delta.normalize().dot(f),range=p.type==='debris'?150:p.type==='hole'?1800:1400;const angular=clamp(p.radius/Math.max(dist,1)*.7,.023,.12);if(dist<range&&dot>Math.cos(angular)&&dot>alignment){alignment=dot;best=p;}}if(best===looked)linger+=dt;else{looked=best;linger=0;}$('reticle').classList.toggle('active',!!best);if(best){const ndc=best.pos.clone().project(camera);$('reticle').style.left=(ndc.x*.5+.5)*innerWidth+'px';$('reticle').style.top=(-ndc.y*.5+.5)*innerHeight+'px';$('reticle').style.opacity=clamp(linger/1.5,.25,1);if(linger>=1.5)discover(best);}else $('reticle').style.opacity=0;}
+function updateCamera(dt){const q=new THREE.Quaternion().copy(ship.quaternion),p=V().copy(ship.position);craft.position.copy(p);craft.quaternion.copy(q);craft.visible=settings.chase&&!transit;cockpit.visible=!settings.chase&&!transit;const desired=p.clone().add(V(0,settings.chase?8:1.1,settings.chase?24:-.5).applyQuaternion(q));if(settings.chase)camera.position.lerp(desired,1-Math.exp(-dt*7));else camera.position.copy(desired);camera.quaternion.copy(q);if(settings.chase)camera.lookAt(p.clone().add(V(0,1,-35).applyQuaternion(q)));if(shakeAmount>.001)camera.position.add(V(rand(-1,1),rand(-1,1),0).multiplyScalar(shakeAmount));shakeAmount*=Math.exp(-dt*5);hullFlash*=Math.exp(-dt*4);shipLight.position.copy(p);shipLight.target.position.copy(p).add(V(0,0,-70).applyQuaternion(q));craft.children.filter(o=>o.isSprite).forEach(o=>{o.material.opacity=.15+localThrottle*.75;o.scale.y=2+localThrottle*5;});}
+function applyTheme(){const t=themes[settings.theme]||themes[0];document.documentElement.style.setProperty('--gold',t[2]);document.documentElement.style.setProperty('--ice',t[4]);$('bTheme').textContent='طیف نور: '+t[0];if(!hole)return;hole.ringMats[0].color.set(t[1]);hole.ringMats[1].color.set(t[4]);hole.halo.material.color.set(t[2]);hole.flare.material.color.set(t[1]);hole.light.color.set(t[2]);hole.rings.forEach(r=>r.material.color.set(t[4]));const hot=new THREE.Color(t[1]),mid=new THREE.Color(t[2]),cool=new THREE.Color(t[3]),attr=hole.diskGeo.attributes.color;for(let i=0;i<hole.meta.length;i++){const k=clamp((hole.meta[i].radius-hole.R*1.35)/(hole.R*4.3),0,1),c=k<.45?hot.clone().lerp(mid,k/.45):mid.clone().lerp(cool,(k-.45)/.55);c.multiplyScalar(1.7-k*.9);attr.setXYZ(i,c.r,c.g,c.b);}attr.needsUpdate=true;}
+function saveSettings(){storage.set('settings',settings);}
+function savePosition(){if(!started||transit)return;storage.set('position',{system:systemIndex,p:[ship.position.x,ship.position.y,ship.position.z],q:[ship.quaternion.x,ship.quaternion.y,ship.quaternion.z,ship.quaternion.w]});}
+function setPanel(id,on){
+ $(id).classList.toggle('open',on);
+ const anyOpen=inputOpen();
+ document.body.classList.toggle('menus-open',anyOpen);
+ if(anyOpen)resetTouch();
+ keys.clear();mouse.x=mouse.y=0;
+ if(on&&document.pointerLockElement)document.exitPointerLock();
+ $('panelToggle').setAttribute('aria-expanded',$('panel').classList.contains('open'));
+ $('bMap').setAttribute('aria-expanded',$('systemMap').classList.contains('open'));
+ $('bLog').setAttribute('aria-expanded',$('logPanel').classList.contains('open'));
+ document.body.classList.toggle('piloting',started&&!inputOpen());
+}
+function toggleMap(){setPanel('systemMap',!$('systemMap').classList.contains('open'));}
+function toggleCamera(){settings.chase=!settings.chase;$('bCamera').textContent=settings.chase?'دوربین: تعقیب سفینه':'دوربین: کابین';saveSettings();}
+function toggleLetter(){settings.letterbox=!settings.letterbox;document.body.classList.toggle('letterboxed',settings.letterbox);$('bLetter').textContent='قاب سینمایی: '+(settings.letterbox?'روشن':'خاموش');$('bLetter').setAttribute('aria-pressed',settings.letterbox);saveSettings();}
+function toggleMute(){AudioSys.ensure();settings.muted=!settings.muted;AudioSys.setMuted(settings.muted);$('bMute').textContent='صدا: '+(settings.muted?'قطع':'روشن');$('bMute').setAttribute('aria-pressed',settings.muted);saveSettings();}
+function drawMap(){
+ const c=$('mapCanvas'),x=c.getContext('2d'),w=c.width,h=c.height;
+ const nodes=pois.filter(p=>p.type!=='debris'),positions=nodes.map(p=>p.pos).concat([ship.position]);
+ const minX=Math.min(...positions.map(p=>p.x))-380,maxX=Math.max(...positions.map(p=>p.x))+380;
+ const minZ=Math.min(...positions.map(p=>p.z))-380,maxZ=Math.max(...positions.map(p=>p.z))+380;
+ const scale=Math.min((w-60)/(maxX-minX),(h-80)/(maxZ-minZ));
+ const cx=(maxX+minX)/2,cz=(maxZ+minZ)/2,px=p=>w/2+(p.x-cx)*scale,py=p=>h/2+(p.z-cz)*scale;
+ x.clearRect(0,0,w,h);x.strokeStyle='#9accea12';x.lineWidth=1;
+ for(let i=32;i<w;i+=48){x.beginPath();x.moveTo(i,0);x.lineTo(i,h);x.stroke();}
+ for(let i=32;i<h;i+=48){x.beginPath();x.moveTo(0,i);x.lineTo(w,i);x.stroke();}
+ x.font='11px Vazirmatn';x.textAlign='center';
+ for(const p of nodes){
+  const star=p.type==='sun',size=Math.max(star?9:3,p.radius*scale);
+  if(star){const glow=x.createRadialGradient(px(p.pos),py(p.pos),0,px(p.pos),py(p.pos),size*3);glow.addColorStop(0,'#ffbc6255');glow.addColorStop(1,'transparent');x.fillStyle=glow;x.fillRect(px(p.pos)-size*3,py(p.pos)-size*3,size*6,size*6);}
+  x.fillStyle=star?'#ffc76a':p.discovered?'#9dd6da':'#626e81';x.globalAlpha=star||p.discovered?1:.65;
+  x.beginPath();x.arc(px(p.pos),py(p.pos),size,0,Math.PI*2);x.fill();
+  if(p.type==='ringed'){x.strokeStyle='#cab7e4';x.beginPath();x.ellipse(px(p.pos),py(p.pos),size*1.8,size*.6,-.3,0,Math.PI*2);x.stroke();}
+  x.fillStyle=star?'#ffd6a0':'#b9cbd6';x.fillText(star?p.name:p.discovered?p.name:'سیگنال ناشناخته',px(p.pos),py(p.pos)-size-9);
+ }
+ x.globalAlpha=1;const f=V(0,0,-1).applyQuaternion(ship.quaternion);
+ x.save();x.translate(px(ship.position),py(ship.position));x.rotate(Math.atan2(f.x,-f.z));x.fillStyle='#fff3cc';x.beginPath();x.moveTo(0,-9);x.lineTo(5,6);x.lineTo(0,3);x.lineTo(-5,6);x.closePath();x.fill();x.restore();
+ x.fillStyle='#aed5e0';x.textAlign='right';x.fillText('سامانهٔ '+fa(systemIndex+1)+' · '+fa(planets.filter(p=>!p.isMoon).length)+' سیاره · '+fa(planets.filter(p=>p.isMoon).length)+' قمر',w-18,h-18);
+}
+$('panelToggle').onclick=()=>setPanel('panel',!$('panel').classList.contains('open'));
+$('quickMap').onclick=toggleMap;$('quickCamera').onclick=()=>{toggleCamera();AudioSys.blip();};$('quickLand').onclick=startAutoLand;$('quickLaunch').onclick=startTakeoff;
+$('bMap').onclick=toggleMap;$('mapClose').onclick=()=>setPanel('systemMap',false);$('bLog').onclick=()=>setPanel('logPanel',!$('logPanel').classList.contains('open'));$('logClose').onclick=()=>setPanel('logPanel',false);$('bCamera').onclick=toggleCamera;$('bLand').onclick=startAutoLand;$('bTakeoff').onclick=startTakeoff;$('bLetter').onclick=toggleLetter;$('bMute').onclick=toggleMute;$('bTheme').onclick=()=>{settings.theme=(settings.theme+1)%4;applyTheme();saveSettings();AudioSys.blip();};$('vol').value=settings.volume*100;$('vol').oninput=e=>{settings.volume=e.target.value/100;AudioSys.setVolume(settings.volume);saveSettings();};
+$('bSnap').onclick=()=>{document.body.classList.add('ui-hidden');requestAnimationFrame(()=>{composer.render();try{const a=document.createElement('a');a.href=canvas.toDataURL('image/png');a.download='event-horizon-'+Date.now()+'.png';a.click();toast('تصویر ثبت شد.');}catch{toast('مرورگر اجازهٔ ذخیرهٔ تصویر را نداد.');}finally{document.body.classList.remove('ui-hidden');}});};
+const normalizeKey=e=>e.code==='Space'?'space':e.key.toLowerCase();
+addEventListener('keydown',e=>{if(!started||e.target.matches('input'))return;const k=normalizeKey(e);if(['tab',' ','space','arrowup','arrowdown','arrowleft','arrowright','control'].includes(k))e.preventDefault();if(!e.repeat){if(autoLand&&['w','s','a','d','space','control','arrowup','arrowdown','arrowleft','arrowright','q','e','escape'].includes(k))cancelAutoLand();if(k==='tab')toggleMap();if(k==='v')toggleCamera();if(k==='m')toggleMute();if(k==='l')toggleLetter();if(k==='j')$('bLog').click();if(k==='f')poke();if(k==='g')startAutoLand();if(k==='t')startTakeoff();if(k==='escape'){['panel','systemMap','logPanel'].forEach(id=>setPanel(id,false));keys.clear();mouse.x=mouse.y=0;}}keys.add(k);});addEventListener('keyup',e=>keys.delete(normalizeKey(e)));addEventListener('blur',()=>{keys.clear();mouse.x=mouse.y=0;savePosition();});document.addEventListener('visibilitychange',()=>{if(document.hidden){keys.clear();savePosition();}});addEventListener('pagehide',savePosition);
+canvas.addEventListener('click',()=>{if(!started||transit)return;if(document.pointerLockElement===canvas){poke();return;}if(matchMedia('(pointer:fine)').matches&&!inputOpen()){const request=canvas.requestPointerLock?.();request?.catch?.(()=>toast('کنترل با کلیدهای جهت‌دار فعال است.'));}});
+document.addEventListener('pointerlockchange',()=>{mouse.x=mouse.y=0;document.body.classList.toggle('piloting',started&&!inputOpen());});addEventListener('mousemove',e=>{if(document.pointerLockElement===canvas){mouse.x=clamp(mouse.x+e.movementX*.016,-.9,.9);mouse.y=clamp(mouse.y-e.movementY*.016,-.9,.9);}else{$('cur').style.left=e.clientX+'px';$('cur').style.top=e.clientY+'px';$('cur').style.display='block';$('cur').classList.toggle('big',!!e.target.closest('button,input'));}});
+function bindThumb(id,prefix){
+ const pad=$(id),knob=pad.querySelector('.thumbKnob');
+ const update=e=>{
+  const record=touchPointers.get(e.pointerId);if(!record||record.element!==pad)return;
+  const box=pad.getBoundingClientRect(),radius=box.width*.33;
+  let x=(e.clientX-box.left-box.width/2)/radius,y=(e.clientY-box.top-box.height/2)/radius;
+  const length=Math.hypot(x,y);if(length>1){x/=length;y/=length;}
+  const magnitude=Math.hypot(x,y),scaled=magnitude<.14?0:(magnitude-.14)/.86;
+  touch[prefix+'X']=magnitude?x/magnitude*scaled:0;touch[prefix+'Y']=magnitude?y/magnitude*scaled:0;
+  knob.style.transform=`translate(calc(-50% + ${x*radius}px),calc(-50% + ${y*radius}px))`;
+ };
+ pad.addEventListener('pointerdown',e=>{
+  if(!started||inputOpen()||transit||!mobileControls.matches||[...touchPointers.values()].some(r=>r.element===pad))return;
+  e.preventDefault();cancelAutoLand();pad.setPointerCapture(e.pointerId);touchPointers.set(e.pointerId,{element:pad,prefix});pad.classList.add('active');update(e);
+ });
+ pad.addEventListener('pointermove',update);
+ const release=e=>{
+  if(touchPointers.get(e.pointerId)?.element!==pad)return;
+  touchPointers.delete(e.pointerId);touch[prefix+'X']=touch[prefix+'Y']=0;pad.classList.remove('active');knob.style.transform='translate(-50%,-50%)';
+ };
+ for(const event of ['pointerup','pointercancel','lostpointercapture'])pad.addEventListener(event,release);
+}
+bindThumb('moveStick','move');bindThumb('lookStick','look');
+for(const [id,field] of [['touchRise','rise'],['touchDrop','drop'],['touchBoost','boost']]){
+ const button=$(id);
+ button.addEventListener('pointerdown',e=>{
+  if(!started||inputOpen()||transit||!mobileControls.matches||[...touchPointers.values()].some(r=>r.element===button))return;
+  e.preventDefault();cancelAutoLand();button.setPointerCapture(e.pointerId);touchPointers.set(e.pointerId,{element:button,field});touch[field]=1;button.classList.add('on');button.setAttribute('aria-pressed','true');
+ });
+ const release=e=>{if(touchPointers.get(e.pointerId)?.element!==button)return;touchPointers.delete(e.pointerId);touch[field]=0;button.classList.remove('on');button.setAttribute('aria-pressed','false');};
+ for(const event of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(event,release);
+}
+$('touchLand').onclick=()=>{resetTouch();if(landed||surfaceHold)startTakeoff();else startAutoLand();};
+addEventListener('blur',resetTouch);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)resetTouch();});
+mobileControls.addEventListener('change',resetTouch);
+addEventListener('resize',resetTouch);
+buildSystem(systemIndex);
+const positionSave=storage.get('position',null);
+if(positionSave&&positionSave.system===systemIndex&&Array.isArray(positionSave.p)&&positionSave.p.length===3&&positionSave.p.every(n=>Number.isFinite(n)&&Math.abs(n)<100000)&&Array.isArray(positionSave.q)&&positionSave.q.length===4&&positionSave.q.every(Number.isFinite)){
+ ship.position.set(...positionSave.p);ship.quaternion.set(...positionSave.q);ship.quaternion.normalize();
+}else{
+ const home=planets[0],outward=V(.25,1,.35).normalize();
+ const spawn=home.pos.clone().add(outward.clone().multiplyScalar(home.radius*1.9));
+ ship.position.set(...spawn.toArray());
+ const forward=V(0,0,-1).sub(outward.clone().multiplyScalar(V(0,0,-1).dot(outward))).normalize();
+ const right=forward.clone().cross(outward).normalize();
+ const orientation=new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(right,outward,forward.negate()));
+ ship.quaternion.copy(orientation);ship.velocity.setZero();ship.angularVelocity.setZero();
+}
+AudioSys.volume=settings.volume;AudioSys.muted=settings.muted;document.body.classList.toggle('letterboxed',settings.letterbox);$('bLetter').setAttribute('aria-pressed',String(settings.letterbox));$('bMute').setAttribute('aria-pressed',String(settings.muted));$('bLetter').textContent='قاب سینمایی: '+(settings.letterbox?'روشن':'خاموش');$('bMute').textContent='صدا: '+(settings.muted?'قطع':'روشن');$('bCamera').textContent=settings.chase?'دوربین: تعقیب سفینه':'دوربین: کابین';
+$('startBtn').onclick=()=>{if(started)return;AudioSys.ensure();started=true;document.body.classList.remove('booting');$('loader').style.opacity=0;$('loader').style.pointerEvents='none';setTimeout(()=>$('loader').style.display='none',1000);document.body.classList.add('piloting');$('hint').textContent='W/S پیشران · A/D جانبی · Space/Ctrl صعود و نزول · جهت‌ها هدایت · Shift شتاب · G فرود خودکار · T برخاستن · V دوربین · Tab نقشه · J دفتر';toast('برای برخاستن Space یا T را بزنید. مسیر بعدی با شماست.');};
+const clock=new THREE.Clock();let accumulator=0;
+function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.05);if(document.hidden)return;elapsed+=dt;film.uniforms.time.value=elapsed;fpsTime+=dt;frameCount++;if(fpsTime>1){fps=Math.round(frameCount/fpsTime);fpsTime=0;frameCount=0;}let altitude=0;if(started){mouse.x*=Math.exp(-dt*8);mouse.y*=Math.exp(-dt*8);if(transit)updateTransit(dt);else{updateDebris();accumulator+=dt;let steps=0;while(accumulator>=1/120&&steps<7){flyStep(1/120);accumulator-=1/120;steps++;}updateCamera(dt);altitude=updateEnvironment(dt);updateDiscovery(dt);if(V().copy(ship.position).distanceTo(gateway.pos)<35)beginTransit();}saveTime+=dt;if(saveTime>8){saveTime=0;savePosition();}}else updateCamera(dt);
+if(!transit){station.group.position.copy(station.body.position);station.group.quaternion.copy(station.body.quaternion);for(const p of planets){const dist=camera.position.distanceTo(p.pos),blend=clamp((dist-p.radius*9)/(p.radius*7),0,1);p.globe.material.opacity=1-blend;p.globe.visible=blend<.995;p.far.material.opacity=blend;p.far.visible=blend>.005;p.atmo.visible=blend<.99;if(p.details)p.details.visible=dist<p.radius*3.2;}
+if(solarStar){solarStar.uniforms.time.value=elapsed;const sd=camera.position.distanceTo(solarStar.pos);solarStar.corona.material.opacity=.34*clamp(sd/(solarStar.radius*8),.25,1);}
+const pos=hole.diskGeo.attributes.position;for(let i=0;i<hole.meta.length;i++){const m=hole.meta[i];m.angle+=dt*.12*Math.pow(m.radius/(hole.R*1.35),-1.5);pos.setXYZ(i,Math.cos(m.angle)*m.radius,m.y,Math.sin(m.angle)*m.radius);}pos.needsUpdate=true;hole.rings.forEach((r,i)=>r.rotation.z+=dt*(i%2?-.035:.025));const hp=holePosition.clone().project(camera),direction=holePosition.clone().sub(camera.position),dist=direction.length(),inFront=direction.dot(V(0,0,-1).applyQuaternion(camera.quaternion))>0;const onScreen=inFront&&Math.abs(hp.x)<1.3&&Math.abs(hp.y)<1.3;lens.uniforms.center.value.set(hp.x*.5+.5,hp.y*.5+.5);lens.uniforms.strength.value=onScreen?clamp(.18/dist,.000025,.0025):0;lens.uniforms.radius.value=Math.max(.002,Math.pow(hole.R/Math.max(dist,90)*.5,2));hole.flare.material.opacity=onScreen?clamp(1-dist/3500,.05,.4)*(1-Math.abs(direction.normalize().y)*.7):0;consumption=Math.max(0,consumption-dt);hole.halo.material.opacity=.19+consumption*.25;gateway.rings.forEach((r,i)=>{r.rotation.y+=dt*.04*(i+1);r.rotation.z-=dt*.025;});}
+sky.position.copy(camera.position);stars.position.copy(camera.position);haze.position.copy(camera.position);wanderTime+=dt;const phase=wanderTime%70;wander.visible=phase<18&&!atmosphere&&!transit;wander.position.copy(camera.position).add(V(-1800+phase*190,900,-4300));uiTime+=dt;if(uiTime>.15&&started){uiTime=0;
+ const speed=ship.velocity.length(),f=V(0,0,-1).applyQuaternion(ship.quaternion),heading=(Math.atan2(f.x,-f.z)*180/Math.PI+360)%360;
+ const time=s=>fa(Math.floor(s/60))+':'+fa(Math.floor(s%60)).padStart(2,'۰');
+ const verticalRate=V().copy(ship.velocity).dot(V(0,1,0).applyQuaternion(ship.quaternion));
+ $('engineReadout').textContent=fa(Math.round(localThrottle*100))+'٪';
+ $('verticalReadout').textContent=fa(Math.round(verticalRate))+' m/s';
+ const totalBodies=planets.length+2;
+ $('surveyReadout').textContent=fa(records.filter(r=>r.system===systemIndex&&r.id.startsWith(systemIndex+':planet')).length)+' / '+fa(totalBodies);
+ if(surfaceHold){$('biomeBadge').textContent='زیست‌بوم '+(surfaceHold.planet.poi.discovered?surfaceHold.planet.poi.name:'ناشناخته')+' · سطح پایدار';}else{$('biomeBadge').textContent=atmosphere?'جو فعال · کشش سطحی محسوس':'کاوشگر زیست‌بوم آماده است';}$('compass').textContent='سمت '+fa(Math.round(heading))+'° · سامانهٔ '+fa(systemIndex+1);$('hud').innerHTML='سرعت <b>'+fa(Math.round(speed))+'</b> متر/ثانیه<br>گرمای پیشران <b>'+fa(Math.round(heat))+'٪</b><div style="height:2px;background:#ffffff18"><div style="height:2px;width:'+heat+'%;background:'+(overheated?'#e97966':'var(--gold)')+'"></div></div>بدنه <b>'+(hullFlash>.1?'جذب ضربه':'پایدار')+'</b><br>وضعیت <b>'+(transit?'عبور':landed?'روی سطح':atmosphere?'داخل جو':'پرواز آزاد')+'</b><br>مأموریت <b>'+time(missionTime)+'</b> · زمین <b>'+time(earthTime)+'</b><br>نمایش <b>'+fa(fps)+'</b> فریم';$('hud').style.borderColor=hullFlash>.1?'#e99b78':'';const nearest=[...pois].filter(p=>p.type!=='debris').sort((a,b)=>a.pos.distanceTo(camera.position)-b.pos.distanceTo(camera.position)).slice(0,3);$('nearest').replaceChildren(...nearest.map(p=>{const el=document.createElement('div');el.style.opacity=p.discovered?'.85':'.35';el.textContent=(p.discovered?p.name:'سیگنال ناشناخته')+' · '+fa(Math.round(Math.max(0,p.pos.distanceTo(camera.position)-p.radius)))+' متر';return el;}));const approach=nearestPlanet();
+$('approachName').textContent=approach.planet.poi.discovered?approach.planet.poi.name:'سیارهٔ ناشناخته';
+$('altimeter').textContent=fa(Math.round(Math.max(0,approach.alt-2.4)))+' m';
+$('landingStatus').textContent=transit?'عبور از گذرگاه':surfaceHold?'روی سطح · برخاستن با T':autoLand?(autoLand.mode==='launch'?'برخاستن خودکار · T':'فرود نرم در حال انجام · G لغو'):landed?'روی سطح · T برای برخاستن':approach.alt<approach.planet.radius*1.3?'در محدودهٔ فرود · G را بزنید':'برای فرود به سطح نزدیک شوید';
+$('quickLand').textContent=autoLand?'لغو هدایت · G':'فرود · G';
+$('bLand').textContent=autoLand?'لغو هدایت خودکار (G)':'فرود خودکار (G)';
+if($('systemMap').classList.contains('open'))drawMap();}
+composer.render();}
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight);lens.uniforms.aspect.value=camera.aspect;});
+animate();
+
+</script>
+</body>
+</html>
